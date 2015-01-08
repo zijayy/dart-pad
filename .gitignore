@@ -1,0 +1,8 @@
+pubspec.lock
+.pub/
+.settings/
+example/
+lib/
+web/
+test/
+tool/
