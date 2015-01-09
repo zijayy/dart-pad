@@ -1,4 +1,5 @@
 .pub/
+.project
 .settings/
 build/
 example/
