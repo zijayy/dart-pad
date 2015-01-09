@@ -1,1 +1,8 @@
 .pub/
+.settings/
+build/
+example/
+pubspec.lock
+test/
+tool/
+web/
