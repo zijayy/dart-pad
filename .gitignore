@@ -1,9 +1,0 @@
-.pub/
-.project
-.settings/
-build/
-example/
-pubspec.lock
-test/
-tool/
-web/
