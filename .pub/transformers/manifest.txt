@@ -1,2 +1,2 @@
 1.8.3
-script_inliner
+dart_to_js_script_rewriter

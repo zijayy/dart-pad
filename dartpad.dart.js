@@ -2071,7 +2071,7 @@ z.b=0
 z.c=null
 z.d=null
 x=new P.VN(z,b,y)
-for(w=new H.a7(a,a.length,0,null);w.G();)w.Ff.Rx(new P.ff(z,b,y,z.b++),x)
+for(w=new H.a7(a,0,0,null);w.G();)w.Ff.Rx(new P.ff(z,b,y,z.b++),x)
 x=z.b
 if(x===0){z=H.VM(new P.vs(0,$.X3,null),[null])
 z.Xf(C.xD)
@@ -2372,7 +2372,6 @@ Zf:{
 aM:function(a,b){var z=this.MM
 if(z.YM!==0)throw H.b(P.w("Future already completed"))
 z.Xf(b)},
-tZ:function(a){return this.aM(a,null)},
 ZL:function(a,b){this.MM.Nk(a,b)}},
 Fe:{
 "^":"a;nV@,yG>,ZQ,FR,nt",
@@ -3985,28 +3984,24 @@ wv:{
 "^":"",
 qE:{
 "^":"cv;",
-"%":"HTMLAppletElement|HTMLBRElement|HTMLCanvasElement|HTMLContentElement|HTMLDListElement|HTMLDataListElement|HTMLDetailsElement|HTMLDialogElement|HTMLDirectoryElement|HTMLDivElement|HTMLFontElement|HTMLFrameElement|HTMLHRElement|HTMLHeadElement|HTMLHeadingElement|HTMLHtmlElement|HTMLLabelElement|HTMLLegendElement|HTMLMarqueeElement|HTMLModElement|HTMLParagraphElement|HTMLPictureElement|HTMLPreElement|HTMLQuoteElement|HTMLShadowElement|HTMLSpanElement|HTMLTableCaptionElement|HTMLTableCellElement|HTMLTableColElement|HTMLTableDataCellElement|HTMLTableElement|HTMLTableHeaderCellElement|HTMLTableRowElement|HTMLTableSectionElement|HTMLTemplateElement|HTMLTitleElement|HTMLUListElement|HTMLUnknownElement;HTMLElement"},
+"%":"HTMLAppletElement|HTMLBRElement|HTMLBaseElement|HTMLCanvasElement|HTMLContentElement|HTMLDListElement|HTMLDataListElement|HTMLDetailsElement|HTMLDialogElement|HTMLDirectoryElement|HTMLDivElement|HTMLFontElement|HTMLFrameElement|HTMLHRElement|HTMLHeadElement|HTMLHeadingElement|HTMLHtmlElement|HTMLLabelElement|HTMLLegendElement|HTMLMarqueeElement|HTMLModElement|HTMLParagraphElement|HTMLPictureElement|HTMLPreElement|HTMLQuoteElement|HTMLShadowElement|HTMLSpanElement|HTMLTableCaptionElement|HTMLTableCellElement|HTMLTableColElement|HTMLTableDataCellElement|HTMLTableElement|HTMLTableHeaderCellElement|HTMLTableRowElement|HTMLTableSectionElement|HTMLTemplateElement|HTMLTitleElement|HTMLUListElement|HTMLUnknownElement;HTMLElement"},
 Gh:{
-"^":"qE;VI:rel},t5:type=,LU:href}",
+"^":"qE;t5:type=",
 bu:function(a){return a.toString()},
 "%":"HTMLAnchorElement"},
 LL:{
 "^":"ea;G1:message=,pf:status=",
 "%":"ApplicationCacheErrorEvent"},
 fY:{
-"^":"qE;LU:href}",
+"^":"qE;",
 bu:function(a){return a.toString()},
 "%":"HTMLAreaElement"},
-nB:{
-"^":"qE;LU:href}",
-"%":"HTMLBaseElement"},
 Az:{
 "^":"Gv;t5:type=",
 $isAz:true,
 "%":";Blob"},
 QP:{
 "^":"qE;",
-gUV:function(a){return H.VM(new W.Cq(a,"load",!1),[null])},
 $isD0:true,
 "%":"HTMLBodyElement"},
 IF:{
@@ -4058,12 +4053,11 @@ gwd:function(a){return new W.VG(a,a.children)},
 gDD:function(a){return new W.I4(a)},
 bu:function(a){return a.localName},
 gVl:function(a){return H.VM(new W.Cq(a,"click",!1),[null])},
-gUV:function(a){return H.VM(new W.Cq(a,"load",!1),[null])},
 $iscv:true,
 $isD0:true,
 "%":";Element"},
 Fs:{
-"^":"qE;oc:name=,LA:src%,t5:type=",
+"^":"qE;oc:name=,LA:src=,t5:type=",
 "%":"HTMLEmbedElement"},
 hY:{
 "^":"ea;kc:error=,G1:message=",
@@ -4119,7 +4113,7 @@ wa:{
 "^":"D0;",
 "%":";XMLHttpRequestEventTarget"},
 tb:{
-"^":"qE;oc:name=,LA:src%",
+"^":"qE;oc:name=,LA:src=",
 gTZ:function(a){return W.Pv(a.contentWindow)},
 "%":"HTMLIFrameElement"},
 Sg:{
@@ -4127,10 +4121,10 @@ Sg:{
 $isSg:true,
 "%":"ImageData"},
 pA:{
-"^":"qE;LA:src%",
+"^":"qE;LA:src=",
 "%":"HTMLImageElement"},
 Mi:{
-"^":"qE;lz:disabled},oc:name=,LA:src%,t5:type=,P:value=",
+"^":"qE;lz:disabled},oc:name=,LA:src=,t5:type=,P:value=",
 $iscv:true,
 $isD0:true,
 $isKV:true,
@@ -4146,13 +4140,13 @@ wP:{
 "^":"qE;P:value=",
 "%":"HTMLLIElement"},
 Og:{
-"^":"qE;lz:disabled},LU:href},VI:rel},t5:type=",
+"^":"qE;lz:disabled},t5:type=",
 "%":"HTMLLinkElement"},
 M6:{
 "^":"qE;oc:name=",
 "%":"HTMLMapElement"},
 El:{
-"^":"qE;kc:error=,LA:src%",
+"^":"qE;kc:error=,LA:src=",
 "%":"HTMLAudioElement|HTMLMediaElement|HTMLVideoElement"},
 aB:{
 "^":"ea;G1:message=",
@@ -4244,13 +4238,13 @@ Mw:{
 "^":"ea;nU:data=",
 "%":"PushEvent"},
 j2:{
-"^":"qE;LA:src%,t5:type=",
+"^":"qE;LA:src=,t5:type=",
 "%":"HTMLScriptElement"},
 lp:{
 "^":"qE;lz:disabled},B:length=,oc:name=,t5:type=,P:value=",
 "%":"HTMLSelectElement"},
 yN:{
-"^":"qE;LA:src%,t5:type=",
+"^":"qE;LA:src=,t5:type=",
 "%":"HTMLSourceElement"},
 zD:{
 "^":"ea;kc:error=,G1:message=",
@@ -4268,7 +4262,7 @@ y6:{
 "^":"w6;YK:altKey=,EX:ctrlKey=,Nl:metaKey=,qx:shiftKey=",
 "%":"TouchEvent"},
 RH:{
-"^":"qE;fY:kind=,LA:src%",
+"^":"qE;fY:kind=,LA:src=",
 "%":"HTMLTrackElement"},
 w6:{
 "^":"ea;",
@@ -4636,7 +4630,6 @@ gDD:function(a){if(a._cssClassSet==null)a._cssClassSet=new P.O7(a)
 return a._cssClassSet},
 gwd:function(a){return H.VM(new P.D7(a,new W.e7(a)),[W.cv])},
 gVl:function(a){return H.VM(new W.Cq(a,"click",!1),[null])},
-gUV:function(a){return H.VM(new W.Cq(a,"load",!1),[null])},
 $isD0:true,
 "%":"SVGAElement|SVGAltGlyphDefElement|SVGAltGlyphElement|SVGAltGlyphItemElement|SVGAnimateElement|SVGAnimateMotionElement|SVGAnimateTransformElement|SVGAnimationElement|SVGCircleElement|SVGClipPathElement|SVGComponentTransferFunctionElement|SVGCursorElement|SVGDefsElement|SVGDescElement|SVGDiscardElement|SVGEllipseElement|SVGFEDistantLightElement|SVGFEDropShadowElement|SVGFEFuncAElement|SVGFEFuncBElement|SVGFEFuncGElement|SVGFEFuncRElement|SVGFEMergeNodeElement|SVGFEPointLightElement|SVGFESpotLightElement|SVGFilterElement|SVGFontElement|SVGFontFaceElement|SVGFontFaceFormatElement|SVGFontFaceNameElement|SVGFontFaceSrcElement|SVGFontFaceUriElement|SVGForeignObjectElement|SVGGElement|SVGGeometryElement|SVGGlyphElement|SVGGlyphRefElement|SVGGradientElement|SVGGraphicsElement|SVGHKernElement|SVGImageElement|SVGLineElement|SVGLinearGradientElement|SVGMPathElement|SVGMarkerElement|SVGMaskElement|SVGMetadataElement|SVGMissingGlyphElement|SVGPathElement|SVGPatternElement|SVGPolygonElement|SVGPolylineElement|SVGRadialGradientElement|SVGRectElement|SVGSVGElement|SVGSetElement|SVGStopElement|SVGSwitchElement|SVGSymbolElement|SVGTSpanElement|SVGTextContentElement|SVGTextElement|SVGTextPathElement|SVGTextPositioningElement|SVGTitleElement|SVGUseElement|SVGVKernElement|SVGViewElement;SVGElement"},
 O7:{
@@ -5064,35 +5057,19 @@ HE:{
 "^":"a;Rd<,Pw<",
 bu:function(a){return"["+this.Rd+","+H.d(this.Pw)+"]"}}}],["","",,N,{
 "^":"",
-PE:function(a,b){var z,y
-z=H.VM(new P.Zf(H.VM(new P.vs(0,$.X3,null),[null])),[null])
-y=J.wK(b)
-H.VM(new W.xC(0,y.J6,y.fA,W.VF(new N.eX(z)),y.el),[H.Kp(y,0)]).DN()
-a.appendChild(b)
-return z.MM},
 py:{
 "^":"Ud;",
 gAr:function(){var z=W.vD(document.querySelectorAll("head script"),null)
 return z.Vr(z,new N.KO())},
-kI:function(){var z,y,x,w,v
-z=[]
-y=document.querySelector("html head")
-x=document.createElement("link",null)
-w=J.RE(x)
-w.sVI(x,"stylesheet")
-w.sLU(x,"packages/dartpad_ui/editing/editor_codemirror.css")
-z.push(N.PE(y,x))
-v=document.createElement("script",null)
-J.Yj(v,"packages/codemirror/codemirror.js")
-z.push(N.PE(y,v))
-return P.pH(z,!1)},
+kI:function(){document.querySelector("html head")
+return P.pH([],!1)},
 vy:function(a,b){var z,y
 z=new X.rV(null,X.Pa(a,P.EF(["matchBrackets",!0,"tabSize",2,"indentUnit",2,"autofocus",!0,"cursorHeight",0.85,"autoCloseBrackets",!0,"gutters",["CodeMirror-lint-markers"],"theme","zenburn"],null,null)),P.Fl(null,null))
 y=new N.nb(z,null,this)
 y.QV=new N.Mz(z.Mg(),y)
 return y},
 Su:function(a){return this.vy(a,null)},
-static:{"^":"Ao,Fn"}},
+static:{"^":"Fn"}},
 KO:{
 "^":"Tp:28;",
 $1:function(a){return J.Hd(a)==="packages/codemirror/codemirror.js"}},
@@ -5137,10 +5114,7 @@ w=w.gPw()
 z.toString
 y=P.jT(P.EF(["line",x,"ch",y],null,null))
 x=P.jT(P.EF(["line",v,"ch",w],null,null))
-z.Ab.V7("setSelection",[y,x,null])},"$1",null,2,0,null,42,"call"]},
-eX:{
-"^":"Tp:28;a",
-$1:[function(a){this.a.tZ(0)},"$1",null,2,0,null,2,"call"]}}],["","",,P,{
+z.Ab.V7("setSelection",[y,x,null])},"$1",null,2,0,null,42,"call"]}}],["","",,P,{
 "^":"",
 jl:function(a){var z,y
 z=[]
@@ -5730,7 +5704,6 @@ J.WB=function(a,b){if(typeof a=="number"&&typeof b=="number")return a+b
 return J.Qc(a).g(a,b)}
 J.WN=function(a){return J.RE(a).gnU(a)}
 J.Xf=function(a){return J.RE(a).gTZ(a)}
-J.Yj=function(a,b){return J.RE(a).sLA(a,b)}
 J.ZP=function(a,b){return J.RE(a).Tk(a,b)}
 J.ab=function(a){return J.RE(a).gvq(a)}
 J.bi=function(a,b){return J.w1(a).h(a,b)}
@@ -5757,7 +5730,6 @@ J.u6=function(a,b){if(typeof a=="number"&&typeof b=="number")return a<b
 return J.Wx(a).C(a,b)}
 J.uf=function(a){return J.RE(a).gxr(a)}
 J.w8=function(a){return J.RE(a).gkc(a)}
-J.wK=function(a){return J.RE(a).gUV(a)}
 J.xH=function(a,b){if(typeof a=="number"&&typeof b=="number")return a-b
 return J.Wx(a).W(a,b)}
 J.xZ=function(a,b){if(typeof a=="number"&&typeof b=="number")return a>b
