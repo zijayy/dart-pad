@@ -8030,175 +8030,7 @@
   return CodeMirror;
 });
 
-// meta.js
-
-// CodeMirror, copyright (c) by Marijn Haverbeke and others
-// Distributed under an MIT license: http://codemirror.net/LICENSE
-
-(function(mod) {
-  if (typeof exports == "object" && typeof module == "object") // CommonJS
-    mod(require("../lib/codemirror"));
-  else if (typeof define == "function" && define.amd) // AMD
-    define(["../lib/codemirror"], mod);
-  else // Plain browser env
-    mod(CodeMirror);
-})(function(CodeMirror) {
-  "use strict";
-
-  CodeMirror.modeInfo = [
-    {name: "APL", mime: "text/apl", mode: "apl", ext: ["dyalog", "apl"]},
-    {name: "Asterisk", mime: "text/x-asterisk", mode: "asterisk"},
-    {name: "C", mime: "text/x-csrc", mode: "clike", ext: ["c", "h"]},
-    {name: "C++", mime: "text/x-c++src", mode: "clike", ext: ["cpp", "c++", "hpp", "h++"], alias: ["cpp"]},
-    {name: "Cobol", mime: "text/x-cobol", mode: "cobol", ext: ["cob", "cpy"]},
-    {name: "C#", mime: "text/x-csharp", mode: "clike", ext: ["cs"], alias: ["csharp"]},
-    {name: "Clojure", mime: "text/x-clojure", mode: "clojure", ext: ["clj"]},
-    {name: "CoffeeScript", mime: "text/x-coffeescript", mode: "coffeescript", ext: ["coffee"], alias: ["coffee", "coffee-script"]},
-    {name: "Common Lisp", mime: "text/x-common-lisp", mode: "commonlisp", ext: ["cl", "lisp", "el"], alias: ["lisp"]},
-    {name: "Cypher", mime: "application/x-cypher-query", mode: "cypher"},
-    {name: "Cython", mime: "text/x-cython", mode: "python", ext: ["pyx", "pxd", "pxi"]},
-    {name: "CSS", mime: "text/css", mode: "css", ext: ["css"]},
-    {name: "CQL", mime: "text/x-cassandra", mode: "sql", ext: ["cql"]},
-    {name: "D", mime: "text/x-d", mode: "d", ext: ["d"]},
-    {name: "Dart", mimes: ["application/dart", "text/x-dart"], mode: "dart", ext: ["dart"]},
-    {name: "diff", mime: "text/x-diff", mode: "diff", ext: ["diff", "patch"]},
-    {name: "Django", mime: "text/x-django", mode: "django"},
-    {name: "Dockerfile", mime: "text/x-dockerfile", mode: "dockerfile"},
-    {name: "DTD", mime: "application/xml-dtd", mode: "dtd", ext: ["dtd"]},
-    {name: "Dylan", mime: "text/x-dylan", mode: "dylan", ext: ["dylan", "dyl", "intr"]},
-    {name: "EBNF", mime: "text/x-ebnf", mode: "ebnf"},
-    {name: "ECL", mime: "text/x-ecl", mode: "ecl", ext: ["ecl"]},
-    {name: "Eiffel", mime: "text/x-eiffel", mode: "eiffel", ext: ["e"]},
-    {name: "Embedded Javascript", mime: "application/x-ejs", mode: "htmlembedded", ext: ["ejs"]},
-    {name: "Embedded Ruby", mime: "application/x-erb", mode: "htmlembedded", ext: ["erb"]},
-    {name: "Erlang", mime: "text/x-erlang", mode: "erlang", ext: ["erl"]},
-    {name: "Fortran", mime: "text/x-fortran", mode: "fortran", ext: ["f", "for", "f77", "f90"]},
-    {name: "F#", mime: "text/x-fsharp", mode: "mllike", ext: ["fs"], alias: ["fsharp"]},
-    {name: "Gas", mime: "text/x-gas", mode: "gas", ext: ["s"]},
-    {name: "Gherkin", mime: "text/x-feature", mode: "gherkin", ext: ["feature"]},
-    {name: "GitHub Flavored Markdown", mime: "text/x-gfm", mode: "gfm"},
-    {name: "Go", mime: "text/x-go", mode: "go", ext: ["go"]},
-    {name: "Groovy", mime: "text/x-groovy", mode: "groovy", ext: ["groovy"]},
-    {name: "HAML", mime: "text/x-haml", mode: "haml", ext: ["haml"]},
-    {name: "Haskell", mime: "text/x-haskell", mode: "haskell", ext: ["hs"]},
-    {name: "Haxe", mime: "text/x-haxe", mode: "haxe", ext: ["hx"]},
-    {name: "HXML", mime: "text/x-hxml", mode: "haxe", ext: ["hxml"]},
-    {name: "ASP.NET", mime: "application/x-aspx", mode: "htmlembedded", ext: ["aspx"], alias: ["asp", "aspx"]},
-    {name: "HTML", mime: "text/html", mode: "htmlmixed", ext: ["html", "htm"], alias: ["xhtml"]},
-    {name: "HTTP", mime: "message/http", mode: "http"},
-    {name: "IDL", mime: "text/x-idl", mode: "idl", ext: ["pro"]},
-    {name: "Jade", mime: "text/x-jade", mode: "jade", ext: ["jade"]},
-    {name: "Java", mime: "text/x-java", mode: "clike", ext: ["java"]},
-    {name: "Java Server Pages", mime: "application/x-jsp", mode: "htmlembedded", ext: ["jsp"], alias: ["jsp"]},
-    {name: "JavaScript", mimes: ["text/javascript", "text/ecmascript", "application/javascript", "application/x-javascript", "application/ecmascript"],
-     mode: "javascript", ext: ["js"], alias: ["ecmascript", "js", "node"]},
-    {name: "JSON", mimes: ["application/json", "application/x-json"], mode: "javascript", ext: ["json", "map"], alias: ["json5"]},
-    {name: "JSON-LD", mime: "application/ld+json", mode: "javascript", alias: ["jsonld"]},
-    {name: "Jinja2", mime: "null", mode: "jinja2"},
-    {name: "Julia", mime: "text/x-julia", mode: "julia", ext: ["jl"]},
-    {name: "Kotlin", mime: "text/x-kotlin", mode: "kotlin", ext: ["kt"]},
-    {name: "LESS", mime: "text/x-less", mode: "css", ext: ["less"]},
-    {name: "LiveScript", mime: "text/x-livescript", mode: "livescript", ext: ["ls"], alias: ["ls"]},
-    {name: "Lua", mime: "text/x-lua", mode: "lua", ext: ["lua"]},
-    {name: "Markdown", mime: "text/x-markdown", mode: "markdown", ext: ["markdown", "md", "mkd"]},
-    {name: "mIRC", mime: "text/mirc", mode: "mirc"},
-    {name: "MariaDB SQL", mime: "text/x-mariadb", mode: "sql"},
-    {name: "Modelica", mime: "text/x-modelica", mode: "modelica", ext: ["mo"]},
-    {name: "MS SQL", mime: "text/x-mssql", mode: "sql"},
-    {name: "MySQL", mime: "text/x-mysql", mode: "sql"},
-    {name: "Nginx", mime: "text/x-nginx-conf", mode: "nginx"},
-    {name: "NTriples", mime: "text/n-triples", mode: "ntriples", ext: ["nt"]},
-    {name: "Objective C", mime: "text/x-objectivec", mode: "clike", ext: ["m", "mm"]},
-    {name: "OCaml", mime: "text/x-ocaml", mode: "mllike", ext: ["ml", "mli", "mll", "mly"]},
-    {name: "Octave", mime: "text/x-octave", mode: "octave", ext: ["m"]},
-    {name: "Pascal", mime: "text/x-pascal", mode: "pascal", ext: ["p", "pas"]},
-    {name: "PEG.js", mime: "null", mode: "pegjs"},
-    {name: "Perl", mime: "text/x-perl", mode: "perl", ext: ["pl", "pm"]},
-    {name: "PHP", mime: "application/x-httpd-php", mode: "php", ext: ["php", "php3", "php4", "php5", "phtml"]},
-    {name: "Pig", mime: "text/x-pig", mode: "pig"},
-    {name: "Plain Text", mime: "text/plain", mode: "null", ext: ["txt", "text", "conf", "def", "list", "log"]},
-    {name: "PLSQL", mime: "text/x-plsql", mode: "sql"},
-    {name: "Properties files", mime: "text/x-properties", mode: "properties", ext: ["properties", "ini", "in"], alias: ["ini", "properties"]},
-    {name: "Python", mime: "text/x-python", mode: "python", ext: ["py", "pyw"]},
-    {name: "Puppet", mime: "text/x-puppet", mode: "puppet", ext: ["pp"]},
-    {name: "Q", mime: "text/x-q", mode: "q", ext: ["q"]},
-    {name: "R", mime: "text/x-rsrc", mode: "r", ext: ["r"], alias: ["rscript"]},
-    {name: "reStructuredText", mime: "text/x-rst", mode: "rst", ext: ["rst"], alias: ["rst"]},
-    {name: "RPM Changes", mime: "text/x-rpm-changes", mode: "rpm"},
-    {name: "RPM Spec", mime: "text/x-rpm-spec", mode: "rpm", ext: ["spec"]},
-    {name: "Ruby", mime: "text/x-ruby", mode: "ruby", ext: ["rb"], alias: ["jruby", "macruby", "rake", "rb", "rbx"]},
-    {name: "Rust", mime: "text/x-rustsrc", mode: "rust", ext: ["rs"]},
-    {name: "Sass", mime: "text/x-sass", mode: "sass", ext: ["sass"]},
-    {name: "Scala", mime: "text/x-scala", mode: "clike", ext: ["scala"]},
-    {name: "Scheme", mime: "text/x-scheme", mode: "scheme", ext: ["scm", "ss"]},
-    {name: "SCSS", mime: "text/x-scss", mode: "css", ext: ["scss"]},
-    {name: "Shell", mime: "text/x-sh", mode: "shell", ext: ["sh", "ksh", "bash"], alias: ["bash", "sh", "zsh"]},
-    {name: "Sieve", mime: "application/sieve", mode: "sieve"},
-    {name: "Slim", mimes: ["text/x-slim", "application/x-slim"], mode: "slim"},
-    {name: "Smalltalk", mime: "text/x-stsrc", mode: "smalltalk", ext: ["st"]},
-    {name: "Smarty", mime: "text/x-smarty", mode: "smarty", ext: ["tpl"]},
-    {name: "SmartyMixed", mime: "text/x-smarty", mode: "smartymixed"},
-    {name: "Solr", mime: "text/x-solr", mode: "solr"},
-    {name: "Soy", mime: "text/x-soy", mode: "soy", ext: ["soy"], alias: ["closure template"]},
-    {name: "SPARQL", mime: "application/sparql-query", mode: "sparql", ext: ["rq", "sparql"], alias: ["sparul"]},
-    {name: "Spreadsheet", mime: "text/x-spreadsheet", mode: "spreadsheet", alias: ["excel", "formula"]},
-    {name: "SQL", mime: "text/x-sql", mode: "sql", ext: ["sql"]},
-    {name: "MariaDB", mime: "text/x-mariadb", mode: "sql"},
-    {name: "sTeX", mime: "text/x-stex", mode: "stex"},
-    {name: "LaTeX", mime: "text/x-latex", mode: "stex", ext: ["text", "ltx"], alias: ["tex"]},
-    {name: "SystemVerilog", mime: "text/x-systemverilog", mode: "verilog", ext: ["v"]},
-    {name: "Tcl", mime: "text/x-tcl", mode: "tcl", ext: ["tcl"]},
-    {name: "Textile", mime: "text/x-textile", mode: "textile"},
-    {name: "TiddlyWiki ", mime: "text/x-tiddlywiki", mode: "tiddlywiki"},
-    {name: "Tiki wiki", mime: "text/tiki", mode: "tiki"},
-    {name: "TOML", mime: "text/x-toml", mode: "toml"},
-    {name: "Tornado", mime: "text/x-tornado", mode: "tornado"},
-    {name: "Turtle", mime: "text/turtle", mode: "turtle", ext: ["ttl"]},
-    {name: "TypeScript", mime: "application/typescript", mode: "javascript", ext: ["ts"], alias: ["ts"]},
-    {name: "VB.NET", mime: "text/x-vb", mode: "vb", ext: ["vb"]},
-    {name: "VBScript", mime: "text/vbscript", mode: "vbscript"},
-    {name: "Velocity", mime: "text/velocity", mode: "velocity", ext: ["vtl"]},
-    {name: "Verilog", mime: "text/x-verilog", mode: "verilog", ext: ["v"]},
-    {name: "XML", mimes: ["application/xml", "text/xml"], mode: "xml", ext: ["xml", "xsl", "xsd"], alias: ["rss", "wsdl", "xsd"]},
-    {name: "XQuery", mime: "application/xquery", mode: "xquery", ext: ["xy", "xquery"]},
-    {name: "YAML", mime: "text/x-yaml", mode: "yaml", ext: ["yaml"], alias: ["yml"]},
-    {name: "Z80", mime: "text/x-z80", mode: "z80", ext: ["z80"]}
-  ];
-  // Ensure all modes have a mime property for backwards compatibility
-  for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
-    var info = CodeMirror.modeInfo[i];
-    if (info.mimes) info.mime = info.mimes[0];
-  }
-
-  CodeMirror.findModeByMIME = function(mime) {
-    for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
-      var info = CodeMirror.modeInfo[i];
-      if (info.mime == mime) return info;
-      if (info.mimes) for (var j = 0; j < info.mimes.length; j++)
-        if (info.mimes[j] == mime) return info;
-    }
-  };
-
-  CodeMirror.findModeByExtension = function(ext) {
-    for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
-      var info = CodeMirror.modeInfo[i];
-      if (info.ext) for (var j = 0; j < info.ext.length; j++)
-        if (info.ext[j] == ext) return info;
-    }
-  };
-
-  CodeMirror.findModeByName = function(name) {
-    name = name.toLowerCase();
-    for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
-      var info = CodeMirror.modeInfo[i];
-      if (info.name.toLowerCase() == name) return info;
-      if (info.alias) for (var j = 0; j < info.alias.length; j++)
-        if (info.alias[j].toLowerCase() == name) return info;
-    }
-  };
-});
-
-// simple.js
+// comment.js
 
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
 // Distributed under an MIT license: http://codemirror.net/LICENSE
@@ -8213,205 +8045,263 @@
 })(function(CodeMirror) {
   "use strict";
 
-  CodeMirror.defineSimpleMode = function(name, states) {
-    CodeMirror.defineMode(name, function(config) {
-      return CodeMirror.simpleMode(config, states);
+  var noOptions = {};
+  var nonWS = /[^\s\u00a0]/;
+  var Pos = CodeMirror.Pos;
+
+  function firstNonWS(str) {
+    var found = str.search(nonWS);
+    return found == -1 ? 0 : found;
+  }
+
+  CodeMirror.commands.toggleComment = function(cm) {
+    var minLine = Infinity, ranges = cm.listSelections(), mode = null;
+    for (var i = ranges.length - 1; i >= 0; i--) {
+      var from = ranges[i].from(), to = ranges[i].to();
+      if (from.line >= minLine) continue;
+      if (to.line >= minLine) to = Pos(minLine, 0);
+      minLine = from.line;
+      if (mode == null) {
+        if (cm.uncomment(from, to)) mode = "un";
+        else { cm.lineComment(from, to); mode = "line"; }
+      } else if (mode == "un") {
+        cm.uncomment(from, to);
+      } else {
+        cm.lineComment(from, to);
+      }
+    }
+  };
+
+  CodeMirror.defineExtension("lineComment", function(from, to, options) {
+    if (!options) options = noOptions;
+    var self = this, mode = self.getModeAt(from);
+    var commentString = options.lineComment || mode.lineComment;
+    if (!commentString) {
+      if (options.blockCommentStart || mode.blockCommentStart) {
+        options.fullLines = true;
+        self.blockComment(from, to, options);
+      }
+      return;
+    }
+    var firstLine = self.getLine(from.line);
+    if (firstLine == null) return;
+    var end = Math.min(to.ch != 0 || to.line == from.line ? to.line + 1 : to.line, self.lastLine() + 1);
+    var pad = options.padding == null ? " " : options.padding;
+    var blankLines = options.commentBlankLines || from.line == to.line;
+
+    self.operation(function() {
+      if (options.indent) {
+        var baseString = firstLine.slice(0, firstNonWS(firstLine));
+        for (var i = from.line; i < end; ++i) {
+          var line = self.getLine(i), cut = baseString.length;
+          if (!blankLines && !nonWS.test(line)) continue;
+          if (line.slice(0, cut) != baseString) cut = firstNonWS(line);
+          self.replaceRange(baseString + commentString + pad, Pos(i, 0), Pos(i, cut));
+        }
+      } else {
+        for (var i = from.line; i < end; ++i) {
+          if (blankLines || nonWS.test(self.getLine(i)))
+            self.replaceRange(commentString + pad, Pos(i, 0));
+        }
+      }
     });
-  };
+  });
 
-  CodeMirror.simpleMode = function(config, states) {
-    ensureState(states, "start");
-    var states_ = {}, meta = states.meta || {}, hasIndentation = false;
-    for (var state in states) if (state != meta && states.hasOwnProperty(state)) {
-      var list = states_[state] = [], orig = states[state];
-      for (var i = 0; i < orig.length; i++) {
-        var data = orig[i];
-        list.push(new Rule(data, states));
-        if (data.indent || data.dedent) hasIndentation = true;
-      }
+  CodeMirror.defineExtension("blockComment", function(from, to, options) {
+    if (!options) options = noOptions;
+    var self = this, mode = self.getModeAt(from);
+    var startString = options.blockCommentStart || mode.blockCommentStart;
+    var endString = options.blockCommentEnd || mode.blockCommentEnd;
+    if (!startString || !endString) {
+      if ((options.lineComment || mode.lineComment) && options.fullLines != false)
+        self.lineComment(from, to, options);
+      return;
     }
-    var mode = {
-      startState: function() {
-        return {state: "start", pending: null,
-                local: null, localState: null,
-                indent: hasIndentation ? [] : null};
-      },
-      copyState: function(state) {
-        var s = {state: state.state, pending: state.pending,
-                 local: state.local, localState: null,
-                 indent: state.indent && state.indent.slice(0)};
-        if (state.localState)
-          s.localState = CodeMirror.copyState(state.local.mode, state.localState);
-        if (state.stack)
-          s.stack = state.stack.slice(0);
-        for (var pers = state.persistentStates; pers; pers = pers.next)
-          s.persistentStates = {mode: pers.mode,
-                                spec: pers.spec,
-                                state: pers.state == state.localState ? s.localState : CodeMirror.copyState(pers.mode, pers.state),
-                                next: s.persistentStates};
-        return s;
-      },
-      token: tokenFunction(states_, config),
-      innerMode: function(state) { return state.local && {mode: state.local.mode, state: state.localState}; },
-      indent: indentFunction(states_, meta)
-    };
-    if (meta) for (var prop in meta) if (meta.hasOwnProperty(prop))
-      mode[prop] = meta[prop];
-    return mode;
-  };
 
-  function ensureState(states, name) {
-    if (!states.hasOwnProperty(name))
-      throw new Error("Undefined state " + name + "in simple mode");
-  }
+    var end = Math.min(to.line, self.lastLine());
+    if (end != from.line && to.ch == 0 && nonWS.test(self.getLine(end))) --end;
 
-  function toRegex(val, caret) {
-    if (!val) return /(?:)/;
-    var flags = "";
-    if (val instanceof RegExp) {
-      if (val.ignoreCase) flags = "i";
-      val = val.source;
-    } else {
-      val = String(val);
-    }
-    return new RegExp((caret === false ? "" : "^") + "(?:" + val + ")", flags);
-  }
+    var pad = options.padding == null ? " " : options.padding;
+    if (from.line > end) return;
 
-  function asToken(val) {
-    if (!val) return null;
-    if (typeof val == "string") return val.replace(/\./g, " ");
-    var result = [];
-    for (var i = 0; i < val.length; i++)
-      result.push(val[i] && val[i].replace(/\./g, " "));
-    return result;
-  }
-
-  function Rule(data, states) {
-    if (data.next || data.push) ensureState(states, data.next || data.push);
-    this.regex = toRegex(data.regex);
-    this.token = asToken(data.token);
-    this.data = data;
-  }
-
-  function tokenFunction(states, config) {
-    return function(stream, state) {
-      if (state.pending) {
-        var pend = state.pending.shift();
-        if (state.pending.length == 0) state.pending = null;
-        stream.pos += pend.text.length;
-        return pend.token;
+    self.operation(function() {
+      if (options.fullLines != false) {
+        var lastLineHasText = nonWS.test(self.getLine(end));
+        self.replaceRange(pad + endString, Pos(end));
+        self.replaceRange(startString + pad, Pos(from.line, 0));
+        var lead = options.blockCommentLead || mode.blockCommentLead;
+        if (lead != null) for (var i = from.line + 1; i <= end; ++i)
+          if (i != end || lastLineHasText)
+            self.replaceRange(lead + pad, Pos(i, 0));
+      } else {
+        self.replaceRange(endString, to);
+        self.replaceRange(startString, from);
       }
+    });
+  });
 
-      if (state.local) {
-        if (state.local.end && stream.match(state.local.end)) {
-          var tok = state.local.endToken || null;
-          state.local = state.localState = null;
-          return tok;
-        } else {
-          var tok = state.local.mode.token(stream, state.localState), m;
-          if (state.local.endScan && (m = state.local.endScan.exec(stream.current())))
-            stream.pos = stream.start + m.index;
-          return tok;
+  CodeMirror.defineExtension("uncomment", function(from, to, options) {
+    if (!options) options = noOptions;
+    var self = this, mode = self.getModeAt(from);
+    var end = Math.min(to.ch != 0 || to.line == from.line ? to.line : to.line - 1, self.lastLine()), start = Math.min(from.line, end);
+
+    // Try finding line comments
+    var lineString = options.lineComment || mode.lineComment, lines = [];
+    var pad = options.padding == null ? " " : options.padding, didSomething;
+    lineComment: {
+      if (!lineString) break lineComment;
+      for (var i = start; i <= end; ++i) {
+        var line = self.getLine(i);
+        var found = line.indexOf(lineString);
+        if (found > -1 && !/comment/.test(self.getTokenTypeAt(Pos(i, found + 1)))) found = -1;
+        if (found == -1 && (i != end || i == start) && nonWS.test(line)) break lineComment;
+        if (found > -1 && nonWS.test(line.slice(0, found))) break lineComment;
+        lines.push(line);
+      }
+      self.operation(function() {
+        for (var i = start; i <= end; ++i) {
+          var line = lines[i - start];
+          var pos = line.indexOf(lineString), endPos = pos + lineString.length;
+          if (pos < 0) continue;
+          if (line.slice(endPos, endPos + pad.length) == pad) endPos += pad.length;
+          didSomething = true;
+          self.replaceRange("", Pos(i, pos), Pos(i, endPos));
+        }
+      });
+      if (didSomething) return true;
+    }
+
+    // Try block comments
+    var startString = options.blockCommentStart || mode.blockCommentStart;
+    var endString = options.blockCommentEnd || mode.blockCommentEnd;
+    if (!startString || !endString) return false;
+    var lead = options.blockCommentLead || mode.blockCommentLead;
+    var startLine = self.getLine(start), endLine = end == start ? startLine : self.getLine(end);
+    var open = startLine.indexOf(startString), close = endLine.lastIndexOf(endString);
+    if (close == -1 && start != end) {
+      endLine = self.getLine(--end);
+      close = endLine.lastIndexOf(endString);
+    }
+    if (open == -1 || close == -1 ||
+        !/comment/.test(self.getTokenTypeAt(Pos(start, open + 1))) ||
+        !/comment/.test(self.getTokenTypeAt(Pos(end, close + 1))))
+      return false;
+
+    // Avoid killing block comments completely outside the selection.
+    // Positions of the last startString before the start of the selection, and the first endString after it.
+    var lastStart = startLine.lastIndexOf(startString, from.ch);
+    var firstEnd = lastStart == -1 ? -1 : startLine.slice(0, from.ch).indexOf(endString, lastStart + startString.length);
+    if (lastStart != -1 && firstEnd != -1 && firstEnd + endString.length != from.ch) return false;
+    // Positions of the first endString after the end of the selection, and the last startString before it.
+    firstEnd = endLine.indexOf(endString, to.ch);
+    var almostLastStart = endLine.slice(to.ch).lastIndexOf(startString, firstEnd - to.ch);
+    lastStart = (firstEnd == -1 || almostLastStart == -1) ? -1 : to.ch + almostLastStart;
+    if (firstEnd != -1 && lastStart != -1 && lastStart != to.ch) return false;
+
+    self.operation(function() {
+      self.replaceRange("", Pos(end, close - (pad && endLine.slice(close - pad.length, close) == pad ? pad.length : 0)),
+                        Pos(end, close + endString.length));
+      var openEnd = open + startString.length;
+      if (pad && startLine.slice(openEnd, openEnd + pad.length) == pad) openEnd += pad.length;
+      self.replaceRange("", Pos(start, open), Pos(start, openEnd));
+      if (lead) for (var i = start + 1; i <= end; ++i) {
+        var line = self.getLine(i), found = line.indexOf(lead);
+        if (found == -1 || nonWS.test(line.slice(0, found))) continue;
+        var foundEnd = found + lead.length;
+        if (pad && line.slice(foundEnd, foundEnd + pad.length) == pad) foundEnd += pad.length;
+        self.replaceRange("", Pos(i, found), Pos(i, foundEnd));
+      }
+    });
+    return true;
+  });
+});
+
+// continuecomment.js
+
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: http://codemirror.net/LICENSE
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+  var modes = ["clike", "css", "javascript"];
+
+  for (var i = 0; i < modes.length; ++i)
+    CodeMirror.extendMode(modes[i], {blockCommentContinue: " * "});
+
+  function continueComment(cm) {
+    if (cm.getOption("disableInput")) return CodeMirror.Pass;
+    var ranges = cm.listSelections(), mode, inserts = [];
+    for (var i = 0; i < ranges.length; i++) {
+      var pos = ranges[i].head, token = cm.getTokenAt(pos);
+      if (token.type != "comment") return CodeMirror.Pass;
+      var modeHere = CodeMirror.innerMode(cm.getMode(), token.state).mode;
+      if (!mode) mode = modeHere;
+      else if (mode != modeHere) return CodeMirror.Pass;
+
+      var insert = null;
+      if (mode.blockCommentStart && mode.blockCommentContinue) {
+        var end = token.string.indexOf(mode.blockCommentEnd);
+        var full = cm.getRange(CodeMirror.Pos(pos.line, 0), CodeMirror.Pos(pos.line, token.end)), found;
+        if (end != -1 && end == token.string.length - mode.blockCommentEnd.length && pos.ch >= end) {
+          // Comment ended, don't continue it
+        } else if (token.string.indexOf(mode.blockCommentStart) == 0) {
+          insert = full.slice(0, token.start);
+          if (!/^\s*$/.test(insert)) {
+            insert = "";
+            for (var j = 0; j < token.start; ++j) insert += " ";
+          }
+        } else if ((found = full.indexOf(mode.blockCommentContinue)) != -1 &&
+                   found + mode.blockCommentContinue.length > token.start &&
+                   /^\s*$/.test(full.slice(0, found))) {
+          insert = full.slice(0, found);
+        }
+        if (insert != null) insert += mode.blockCommentContinue;
+      }
+      if (insert == null && mode.lineComment && continueLineCommentEnabled(cm)) {
+        var line = cm.getLine(pos.line), found = line.indexOf(mode.lineComment);
+        if (found > -1) {
+          insert = line.slice(0, found);
+          if (/\S/.test(insert)) insert = null;
+          else insert += mode.lineComment + line.slice(found + mode.lineComment.length).match(/^\s*/)[0];
         }
       }
-
-      var curState = states[state.state];
-      for (var i = 0; i < curState.length; i++) {
-        var rule = curState[i];
-        var matches = stream.match(rule.regex);
-        if (matches) {
-          if (rule.data.next) {
-            state.state = rule.data.next;
-          } else if (rule.data.push) {
-            (state.stack || (state.stack = [])).push(state.state);
-            state.state = rule.data.push;
-          } else if (rule.data.pop && state.stack && state.stack.length) {
-            state.state = state.stack.pop();
-          }
-
-          if (rule.data.mode)
-            enterLocalMode(config, state, rule.data.mode, rule.token);
-          if (rule.data.indent)
-            state.indent.push(stream.indentation() + config.indentUnit);
-          if (rule.data.dedent)
-            state.indent.pop();
-          if (matches.length > 2) {
-            state.pending = [];
-            for (var j = 2; j < matches.length; j++)
-              if (matches[j])
-                state.pending.push({text: matches[j], token: rule.token[j - 1]});
-            stream.backUp(matches[0].length - (matches[1] ? matches[1].length : 0));
-            return rule.token[0];
-          } else if (rule.token && rule.token.join) {
-            return rule.token[0];
-          } else {
-            return rule.token;
-          }
-        }
-      }
-      stream.next();
-      return null;
-    };
-  }
-
-  function cmp(a, b) {
-    if (a === b) return true;
-    if (!a || typeof a != "object" || !b || typeof b != "object") return false;
-    var props = 0;
-    for (var prop in a) if (a.hasOwnProperty(prop)) {
-      if (!b.hasOwnProperty(prop) || !cmp(a[prop], b[prop])) return false;
-      props++;
+      if (insert == null) return CodeMirror.Pass;
+      inserts[i] = "\n" + insert;
     }
-    for (var prop in b) if (b.hasOwnProperty(prop)) props--;
-    return props == 0;
+
+    cm.operation(function() {
+      for (var i = ranges.length - 1; i >= 0; i--)
+        cm.replaceRange(inserts[i], ranges[i].from(), ranges[i].to(), "+insert");
+    });
   }
 
-  function enterLocalMode(config, state, spec, token) {
-    var pers;
-    if (spec.persistent) for (var p = state.persistentStates; p && !pers; p = p.next)
-      if (spec.spec ? cmp(spec.spec, p.spec) : spec.mode == p.mode) pers = p;
-    var mode = pers ? pers.mode : spec.mode || CodeMirror.getMode(config, spec.spec);
-    var lState = pers ? pers.state : CodeMirror.startState(mode);
-    if (spec.persistent && !pers)
-      state.persistentStates = {mode: mode, spec: spec.spec, state: lState, next: state.persistentStates};
-
-    state.localState = lState;
-    state.local = {mode: mode,
-                   end: spec.end && toRegex(spec.end),
-                   endScan: spec.end && spec.forceEnd !== false && toRegex(spec.end, false),
-                   endToken: token && token.join ? token[token.length - 1] : token};
+  function continueLineCommentEnabled(cm) {
+    var opt = cm.getOption("continueComments");
+    if (opt && typeof opt == "object")
+      return opt.continueLineComment !== false;
+    return true;
   }
 
-  function indexOf(val, arr) {
-    for (var i = 0; i < arr.length; i++) if (arr[i] === val) return true;
-  }
-
-  function indentFunction(states, meta) {
-    return function(state, textAfter, line) {
-      if (state.local && state.local.mode.indent)
-        return state.local.mode.indent(state.localState, textAfter, line);
-      if (state.indent == null || state.local || meta.dontIndentStates && indexOf(state.state, meta.dontIndentStates) > -1)
-        return CodeMirror.Pass;
-
-      var pos = state.indent.length - 1, rules = states[state.state];
-      scan: for (;;) {
-        for (var i = 0; i < rules.length; i++) {
-          var rule = rules[i];
-          if (rule.data.dedent && rule.data.dedentIfLineStart !== false) {
-            var m = rule.regex.exec(textAfter);
-            if (m && m[0]) {
-              pos--;
-              if (rule.next || rule.push) rules = states[rule.next || rule.push];
-              textAfter = textAfter.slice(m[0].length);
-              continue scan;
-            }
-          }
-        }
-        break;
-      }
-      return pos < 0 ? 0 : state.indent[pos];
-    };
-  }
+  CodeMirror.defineOption("continueComments", null, function(cm, val, prev) {
+    if (prev && prev != CodeMirror.Init)
+      cm.removeKeyMap("continueComment");
+    if (val) {
+      var key = "Enter";
+      if (typeof val == "string")
+        key = val;
+      else if (typeof val == "object" && val.key)
+        key = val.key;
+      var map = {name: "continueComment"};
+      map[key] = continueComment;
+      cm.addKeyMap(map);
+    }
+  });
 });
 
 // closebrackets.js
@@ -8697,6 +8587,168 @@
   CodeMirror.defineExtension("scanForBracket", function(pos, dir, style, config){
     return scanForBracket(this, pos, dir, style, config);
   });
+});
+
+// closetag.js
+
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: http://codemirror.net/LICENSE
+
+/**
+ * Tag-closer extension for CodeMirror.
+ *
+ * This extension adds an "autoCloseTags" option that can be set to
+ * either true to get the default behavior, or an object to further
+ * configure its behavior.
+ *
+ * These are supported options:
+ *
+ * `whenClosing` (default true)
+ *   Whether to autoclose when the '/' of a closing tag is typed.
+ * `whenOpening` (default true)
+ *   Whether to autoclose the tag when the final '>' of an opening
+ *   tag is typed.
+ * `dontCloseTags` (default is empty tags for HTML, none for XML)
+ *   An array of tag names that should not be autoclosed.
+ * `indentTags` (default is block tags for HTML, none for XML)
+ *   An array of tag names that should, when opened, cause a
+ *   blank line to be added inside the tag, and the blank line and
+ *   closing line to be indented.
+ *
+ * See demos/closetag.html for a usage example.
+ */
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"), require("../fold/xml-fold"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror", "../fold/xml-fold"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+  CodeMirror.defineOption("autoCloseTags", false, function(cm, val, old) {
+    if (old != CodeMirror.Init && old)
+      cm.removeKeyMap("autoCloseTags");
+    if (!val) return;
+    var map = {name: "autoCloseTags"};
+    if (typeof val != "object" || val.whenClosing)
+      map["'/'"] = function(cm) { return autoCloseSlash(cm); };
+    if (typeof val != "object" || val.whenOpening)
+      map["'>'"] = function(cm) { return autoCloseGT(cm); };
+    cm.addKeyMap(map);
+  });
+
+  var htmlDontClose = ["area", "base", "br", "col", "command", "embed", "hr", "img", "input", "keygen", "link", "meta", "param",
+                       "source", "track", "wbr"];
+  var htmlIndent = ["applet", "blockquote", "body", "button", "div", "dl", "fieldset", "form", "frameset", "h1", "h2", "h3", "h4",
+                    "h5", "h6", "head", "html", "iframe", "layer", "legend", "object", "ol", "p", "select", "table", "ul"];
+
+  function autoCloseGT(cm) {
+    if (cm.getOption("disableInput")) return CodeMirror.Pass;
+    var ranges = cm.listSelections(), replacements = [];
+    for (var i = 0; i < ranges.length; i++) {
+      if (!ranges[i].empty()) return CodeMirror.Pass;
+      var pos = ranges[i].head, tok = cm.getTokenAt(pos);
+      var inner = CodeMirror.innerMode(cm.getMode(), tok.state), state = inner.state;
+      if (inner.mode.name != "xml" || !state.tagName) return CodeMirror.Pass;
+
+      var opt = cm.getOption("autoCloseTags"), html = inner.mode.configuration == "html";
+      var dontCloseTags = (typeof opt == "object" && opt.dontCloseTags) || (html && htmlDontClose);
+      var indentTags = (typeof opt == "object" && opt.indentTags) || (html && htmlIndent);
+
+      var tagName = state.tagName;
+      if (tok.end > pos.ch) tagName = tagName.slice(0, tagName.length - tok.end + pos.ch);
+      var lowerTagName = tagName.toLowerCase();
+      // Don't process the '>' at the end of an end-tag or self-closing tag
+      if (!tagName ||
+          tok.type == "string" && (tok.end != pos.ch || !/[\"\']/.test(tok.string.charAt(tok.string.length - 1)) || tok.string.length == 1) ||
+          tok.type == "tag" && state.type == "closeTag" ||
+          tok.string.indexOf("/") == (tok.string.length - 1) || // match something like <someTagName />
+          dontCloseTags && indexOf(dontCloseTags, lowerTagName) > -1 ||
+          closingTagExists(cm, tagName, pos, state, true))
+        return CodeMirror.Pass;
+
+      var indent = indentTags && indexOf(indentTags, lowerTagName) > -1;
+      replacements[i] = {indent: indent,
+                         text: ">" + (indent ? "\n\n" : "") + "</" + tagName + ">",
+                         newPos: indent ? CodeMirror.Pos(pos.line + 1, 0) : CodeMirror.Pos(pos.line, pos.ch + 1)};
+    }
+
+    for (var i = ranges.length - 1; i >= 0; i--) {
+      var info = replacements[i];
+      cm.replaceRange(info.text, ranges[i].head, ranges[i].anchor, "+insert");
+      var sel = cm.listSelections().slice(0);
+      sel[i] = {head: info.newPos, anchor: info.newPos};
+      cm.setSelections(sel);
+      if (info.indent) {
+        cm.indentLine(info.newPos.line, null, true);
+        cm.indentLine(info.newPos.line + 1, null, true);
+      }
+    }
+  }
+
+  function autoCloseSlash(cm) {
+    if (cm.getOption("disableInput")) return CodeMirror.Pass;
+    var ranges = cm.listSelections(), replacements = [];
+    for (var i = 0; i < ranges.length; i++) {
+      if (!ranges[i].empty()) return CodeMirror.Pass;
+      var pos = ranges[i].head, tok = cm.getTokenAt(pos);
+      var inner = CodeMirror.innerMode(cm.getMode(), tok.state), state = inner.state;
+      if (tok.type == "string" || tok.string.charAt(0) != "<" ||
+          tok.start != pos.ch - 1)
+        return CodeMirror.Pass;
+      // Kludge to get around the fact that we are not in XML mode
+      // when completing in JS/CSS snippet in htmlmixed mode. Does not
+      // work for other XML embedded languages (there is no general
+      // way to go from a mixed mode to its current XML state).
+      if (inner.mode.name != "xml") {
+        if (cm.getMode().name == "htmlmixed" && inner.mode.name == "javascript")
+          replacements[i] = "/script>";
+        else if (cm.getMode().name == "htmlmixed" && inner.mode.name == "css")
+          replacements[i] = "/style>";
+        else
+          return CodeMirror.Pass;
+      } else {
+        if (!state.context || !state.context.tagName ||
+            closingTagExists(cm, state.context.tagName, pos, state))
+          return CodeMirror.Pass;
+        replacements[i] = "/" + state.context.tagName + ">";
+      }
+    }
+    cm.replaceSelections(replacements);
+    ranges = cm.listSelections();
+    for (var i = 0; i < ranges.length; i++)
+      if (i == ranges.length - 1 || ranges[i].head.line < ranges[i + 1].head.line)
+        cm.indentLine(ranges[i].head.line);
+  }
+
+  function indexOf(collection, elt) {
+    if (collection.indexOf) return collection.indexOf(elt);
+    for (var i = 0, e = collection.length; i < e; ++i)
+      if (collection[i] == elt) return i;
+    return -1;
+  }
+
+  // If xml-fold is loaded, we use its functionality to try and verify
+  // whether a given tag is actually unclosed.
+  function closingTagExists(cm, tagName, pos, state, newTag) {
+    if (!CodeMirror.scanForClosingTag) return false;
+    var end = Math.min(cm.lastLine() + 1, pos.line + 500);
+    var nextClose = CodeMirror.scanForClosingTag(cm, pos, null, end);
+    if (!nextClose || nextClose.tag != tagName) return false;
+    var cx = state.context;
+    // If the immediate wrapping context contains onCx instances of
+    // the same tag, a closing tag only exists if there are at least
+    // that many closing tags of that type following.
+    for (var onCx = newTag ? 1 : 0; cx && cx.tagName == tagName; cx = cx.prev) ++onCx;
+    pos = nextClose.to;
+    for (var i = 1; i < onCx; i++) {
+      var next = CodeMirror.scanForClosingTag(cm, pos, null, end);
+      if (!next || next.tag != tagName) return false;
+      pos = next.to;
+    }
+    return true;
+  }
 });
 
 // show-hint.js
@@ -9857,6 +9909,575 @@ CodeMirror.registerHelper("lint", "css", function(text) {
   return found;
 });
 
+});
+
+// panel.js
+
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: http://codemirror.net/LICENSE
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+  CodeMirror.defineExtension("addPanel", function(node, options) {
+    if (!this.state.panels) initPanels(this);
+
+    var info = this.state.panels;
+    if (options && options.position == "bottom")
+      info.wrapper.appendChild(node);
+    else
+      info.wrapper.insertBefore(node, info.wrapper.firstChild);
+    var height = (options && options.height) || node.offsetHeight;
+    this._setSize(null, info.heightLeft -= height);
+    info.panels++;
+    return new Panel(this, node, options, height);
+  });
+
+  function Panel(cm, node, options, height) {
+    this.cm = cm;
+    this.node = node;
+    this.options = options;
+    this.height = height;
+    this.cleared = false;
+  }
+
+  Panel.prototype.clear = function() {
+    if (this.cleared) return;
+    this.cleared = true;
+    var info = this.cm.state.panels;
+    this.cm._setSize(null, info.heightLeft += this.height);
+    info.wrapper.removeChild(this.node);
+    if (--info.panels == 0) removePanels(this.cm);
+  };
+
+  Panel.prototype.changed = function(height) {
+    var newHeight = height == null ? this.node.offsetHeight : height;
+    var info = this.cm.state.panels;
+    this.cm._setSize(null, info.height += (newHeight - this.height));
+    this.height = newHeight;
+  };
+
+  function initPanels(cm) {
+    var wrap = cm.getWrapperElement();
+    var style = window.getComputedStyle ? window.getComputedStyle(wrap) : wrap.currentStyle;
+    var height = parseInt(style.height);
+    var info = cm.state.panels = {
+      setHeight: wrap.style.height,
+      heightLeft: height,
+      panels: 0,
+      wrapper: document.createElement("div")
+    };
+    wrap.parentNode.insertBefore(info.wrapper, wrap);
+    var hasFocus = cm.hasFocus();
+    info.wrapper.appendChild(wrap);
+    if (hasFocus) cm.focus();
+
+    cm._setSize = cm.setSize;
+    if (height != null) cm.setSize = function(width, newHeight) {
+      if (newHeight == null) return this._setSize(width, newHeight);
+      info.setHeight = newHeight;
+      if (typeof newHeight != "number") {
+        var px = /^(\d+\.?\d*)px$/.exec(newHeight);
+        if (px) {
+          newHeight = Number(px[1]);
+        } else {
+          info.wrapper.style.height = newHeight;
+          newHeight = info.wrapper.offsetHeight;
+          info.wrapper.style.height = "";
+        }
+      }
+      cm._setSize(width, info.heightLeft += (newHeight - height));
+      height = newHeight;
+    };
+  }
+
+  function removePanels(cm) {
+    var info = cm.state.panels;
+    cm.state.panels = null;
+
+    var wrap = cm.getWrapperElement();
+    info.wrapper.parentNode.replaceChild(wrap, info.wrapper);
+    wrap.style.height = info.setHeight;
+    cm.setSize = cm._setSize;
+    cm.setSize();
+  }
+});
+
+// overlay.js
+
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: http://codemirror.net/LICENSE
+
+// Utility function that allows modes to be combined. The mode given
+// as the base argument takes care of most of the normal mode
+// functionality, but a second (typically simple) mode is used, which
+// can override the style of text. Both modes get to parse all of the
+// text, but when both assign a non-null style to a piece of code, the
+// overlay wins, unless the combine argument was true and not overridden,
+// or state.overlay.combineTokens was true, in which case the styles are
+// combined.
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+"use strict";
+
+CodeMirror.overlayMode = function(base, overlay, combine) {
+  return {
+    startState: function() {
+      return {
+        base: CodeMirror.startState(base),
+        overlay: CodeMirror.startState(overlay),
+        basePos: 0, baseCur: null,
+        overlayPos: 0, overlayCur: null,
+        streamSeen: null
+      };
+    },
+    copyState: function(state) {
+      return {
+        base: CodeMirror.copyState(base, state.base),
+        overlay: CodeMirror.copyState(overlay, state.overlay),
+        basePos: state.basePos, baseCur: null,
+        overlayPos: state.overlayPos, overlayCur: null
+      };
+    },
+
+    token: function(stream, state) {
+      if (stream != state.streamSeen ||
+          Math.min(state.basePos, state.overlayPos) < stream.start) {
+        state.streamSeen = stream;
+        state.basePos = state.overlayPos = stream.start;
+      }
+
+      if (stream.start == state.basePos) {
+        state.baseCur = base.token(stream, state.base);
+        state.basePos = stream.pos;
+      }
+      if (stream.start == state.overlayPos) {
+        stream.pos = stream.start;
+        state.overlayCur = overlay.token(stream, state.overlay);
+        state.overlayPos = stream.pos;
+      }
+      stream.pos = Math.min(state.basePos, state.overlayPos);
+
+      // state.overlay.combineTokens always takes precedence over combine,
+      // unless set to null
+      if (state.overlayCur == null) return state.baseCur;
+      else if (state.baseCur != null &&
+               state.overlay.combineTokens ||
+               combine && state.overlay.combineTokens == null)
+        return state.baseCur + " " + state.overlayCur;
+      else return state.overlayCur;
+    },
+
+    indent: base.indent && function(state, textAfter) {
+      return base.indent(state.base, textAfter);
+    },
+    electricChars: base.electricChars,
+
+    innerMode: function(state) { return {state: state.base, mode: base}; },
+
+    blankLine: function(state) {
+      if (base.blankLine) base.blankLine(state.base);
+      if (overlay.blankLine) overlay.blankLine(state.overlay);
+    }
+  };
+};
+
+});
+
+// simple.js
+
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: http://codemirror.net/LICENSE
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+  "use strict";
+
+  CodeMirror.defineSimpleMode = function(name, states) {
+    CodeMirror.defineMode(name, function(config) {
+      return CodeMirror.simpleMode(config, states);
+    });
+  };
+
+  CodeMirror.simpleMode = function(config, states) {
+    ensureState(states, "start");
+    var states_ = {}, meta = states.meta || {}, hasIndentation = false;
+    for (var state in states) if (state != meta && states.hasOwnProperty(state)) {
+      var list = states_[state] = [], orig = states[state];
+      for (var i = 0; i < orig.length; i++) {
+        var data = orig[i];
+        list.push(new Rule(data, states));
+        if (data.indent || data.dedent) hasIndentation = true;
+      }
+    }
+    var mode = {
+      startState: function() {
+        return {state: "start", pending: null,
+                local: null, localState: null,
+                indent: hasIndentation ? [] : null};
+      },
+      copyState: function(state) {
+        var s = {state: state.state, pending: state.pending,
+                 local: state.local, localState: null,
+                 indent: state.indent && state.indent.slice(0)};
+        if (state.localState)
+          s.localState = CodeMirror.copyState(state.local.mode, state.localState);
+        if (state.stack)
+          s.stack = state.stack.slice(0);
+        for (var pers = state.persistentStates; pers; pers = pers.next)
+          s.persistentStates = {mode: pers.mode,
+                                spec: pers.spec,
+                                state: pers.state == state.localState ? s.localState : CodeMirror.copyState(pers.mode, pers.state),
+                                next: s.persistentStates};
+        return s;
+      },
+      token: tokenFunction(states_, config),
+      innerMode: function(state) { return state.local && {mode: state.local.mode, state: state.localState}; },
+      indent: indentFunction(states_, meta)
+    };
+    if (meta) for (var prop in meta) if (meta.hasOwnProperty(prop))
+      mode[prop] = meta[prop];
+    return mode;
+  };
+
+  function ensureState(states, name) {
+    if (!states.hasOwnProperty(name))
+      throw new Error("Undefined state " + name + "in simple mode");
+  }
+
+  function toRegex(val, caret) {
+    if (!val) return /(?:)/;
+    var flags = "";
+    if (val instanceof RegExp) {
+      if (val.ignoreCase) flags = "i";
+      val = val.source;
+    } else {
+      val = String(val);
+    }
+    return new RegExp((caret === false ? "" : "^") + "(?:" + val + ")", flags);
+  }
+
+  function asToken(val) {
+    if (!val) return null;
+    if (typeof val == "string") return val.replace(/\./g, " ");
+    var result = [];
+    for (var i = 0; i < val.length; i++)
+      result.push(val[i] && val[i].replace(/\./g, " "));
+    return result;
+  }
+
+  function Rule(data, states) {
+    if (data.next || data.push) ensureState(states, data.next || data.push);
+    this.regex = toRegex(data.regex);
+    this.token = asToken(data.token);
+    this.data = data;
+  }
+
+  function tokenFunction(states, config) {
+    return function(stream, state) {
+      if (state.pending) {
+        var pend = state.pending.shift();
+        if (state.pending.length == 0) state.pending = null;
+        stream.pos += pend.text.length;
+        return pend.token;
+      }
+
+      if (state.local) {
+        if (state.local.end && stream.match(state.local.end)) {
+          var tok = state.local.endToken || null;
+          state.local = state.localState = null;
+          return tok;
+        } else {
+          var tok = state.local.mode.token(stream, state.localState), m;
+          if (state.local.endScan && (m = state.local.endScan.exec(stream.current())))
+            stream.pos = stream.start + m.index;
+          return tok;
+        }
+      }
+
+      var curState = states[state.state];
+      for (var i = 0; i < curState.length; i++) {
+        var rule = curState[i];
+        var matches = stream.match(rule.regex);
+        if (matches) {
+          if (rule.data.next) {
+            state.state = rule.data.next;
+          } else if (rule.data.push) {
+            (state.stack || (state.stack = [])).push(state.state);
+            state.state = rule.data.push;
+          } else if (rule.data.pop && state.stack && state.stack.length) {
+            state.state = state.stack.pop();
+          }
+
+          if (rule.data.mode)
+            enterLocalMode(config, state, rule.data.mode, rule.token);
+          if (rule.data.indent)
+            state.indent.push(stream.indentation() + config.indentUnit);
+          if (rule.data.dedent)
+            state.indent.pop();
+          if (matches.length > 2) {
+            state.pending = [];
+            for (var j = 2; j < matches.length; j++)
+              if (matches[j])
+                state.pending.push({text: matches[j], token: rule.token[j - 1]});
+            stream.backUp(matches[0].length - (matches[1] ? matches[1].length : 0));
+            return rule.token[0];
+          } else if (rule.token && rule.token.join) {
+            return rule.token[0];
+          } else {
+            return rule.token;
+          }
+        }
+      }
+      stream.next();
+      return null;
+    };
+  }
+
+  function cmp(a, b) {
+    if (a === b) return true;
+    if (!a || typeof a != "object" || !b || typeof b != "object") return false;
+    var props = 0;
+    for (var prop in a) if (a.hasOwnProperty(prop)) {
+      if (!b.hasOwnProperty(prop) || !cmp(a[prop], b[prop])) return false;
+      props++;
+    }
+    for (var prop in b) if (b.hasOwnProperty(prop)) props--;
+    return props == 0;
+  }
+
+  function enterLocalMode(config, state, spec, token) {
+    var pers;
+    if (spec.persistent) for (var p = state.persistentStates; p && !pers; p = p.next)
+      if (spec.spec ? cmp(spec.spec, p.spec) : spec.mode == p.mode) pers = p;
+    var mode = pers ? pers.mode : spec.mode || CodeMirror.getMode(config, spec.spec);
+    var lState = pers ? pers.state : CodeMirror.startState(mode);
+    if (spec.persistent && !pers)
+      state.persistentStates = {mode: mode, spec: spec.spec, state: lState, next: state.persistentStates};
+
+    state.localState = lState;
+    state.local = {mode: mode,
+                   end: spec.end && toRegex(spec.end),
+                   endScan: spec.end && spec.forceEnd !== false && toRegex(spec.end, false),
+                   endToken: token && token.join ? token[token.length - 1] : token};
+  }
+
+  function indexOf(val, arr) {
+    for (var i = 0; i < arr.length; i++) if (arr[i] === val) return true;
+  }
+
+  function indentFunction(states, meta) {
+    return function(state, textAfter, line) {
+      if (state.local && state.local.mode.indent)
+        return state.local.mode.indent(state.localState, textAfter, line);
+      if (state.indent == null || state.local || meta.dontIndentStates && indexOf(state.state, meta.dontIndentStates) > -1)
+        return CodeMirror.Pass;
+
+      var pos = state.indent.length - 1, rules = states[state.state];
+      scan: for (;;) {
+        for (var i = 0; i < rules.length; i++) {
+          var rule = rules[i];
+          if (rule.data.dedent && rule.data.dedentIfLineStart !== false) {
+            var m = rule.regex.exec(textAfter);
+            if (m && m[0]) {
+              pos--;
+              if (rule.next || rule.push) rules = states[rule.next || rule.push];
+              textAfter = textAfter.slice(m[0].length);
+              continue scan;
+            }
+          }
+        }
+        break;
+      }
+      return pos < 0 ? 0 : state.indent[pos];
+    };
+  }
+});
+
+// meta.js
+
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: http://codemirror.net/LICENSE
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+  "use strict";
+
+  CodeMirror.modeInfo = [
+    {name: "APL", mime: "text/apl", mode: "apl", ext: ["dyalog", "apl"]},
+    {name: "Asterisk", mime: "text/x-asterisk", mode: "asterisk"},
+    {name: "C", mime: "text/x-csrc", mode: "clike", ext: ["c", "h"]},
+    {name: "C++", mime: "text/x-c++src", mode: "clike", ext: ["cpp", "c++", "hpp", "h++"], alias: ["cpp"]},
+    {name: "Cobol", mime: "text/x-cobol", mode: "cobol", ext: ["cob", "cpy"]},
+    {name: "C#", mime: "text/x-csharp", mode: "clike", ext: ["cs"], alias: ["csharp"]},
+    {name: "Clojure", mime: "text/x-clojure", mode: "clojure", ext: ["clj"]},
+    {name: "CoffeeScript", mime: "text/x-coffeescript", mode: "coffeescript", ext: ["coffee"], alias: ["coffee", "coffee-script"]},
+    {name: "Common Lisp", mime: "text/x-common-lisp", mode: "commonlisp", ext: ["cl", "lisp", "el"], alias: ["lisp"]},
+    {name: "Cypher", mime: "application/x-cypher-query", mode: "cypher"},
+    {name: "Cython", mime: "text/x-cython", mode: "python", ext: ["pyx", "pxd", "pxi"]},
+    {name: "CSS", mime: "text/css", mode: "css", ext: ["css"]},
+    {name: "CQL", mime: "text/x-cassandra", mode: "sql", ext: ["cql"]},
+    {name: "D", mime: "text/x-d", mode: "d", ext: ["d"]},
+    {name: "Dart", mimes: ["application/dart", "text/x-dart"], mode: "dart", ext: ["dart"]},
+    {name: "diff", mime: "text/x-diff", mode: "diff", ext: ["diff", "patch"]},
+    {name: "Django", mime: "text/x-django", mode: "django"},
+    {name: "Dockerfile", mime: "text/x-dockerfile", mode: "dockerfile"},
+    {name: "DTD", mime: "application/xml-dtd", mode: "dtd", ext: ["dtd"]},
+    {name: "Dylan", mime: "text/x-dylan", mode: "dylan", ext: ["dylan", "dyl", "intr"]},
+    {name: "EBNF", mime: "text/x-ebnf", mode: "ebnf"},
+    {name: "ECL", mime: "text/x-ecl", mode: "ecl", ext: ["ecl"]},
+    {name: "Eiffel", mime: "text/x-eiffel", mode: "eiffel", ext: ["e"]},
+    {name: "Embedded Javascript", mime: "application/x-ejs", mode: "htmlembedded", ext: ["ejs"]},
+    {name: "Embedded Ruby", mime: "application/x-erb", mode: "htmlembedded", ext: ["erb"]},
+    {name: "Erlang", mime: "text/x-erlang", mode: "erlang", ext: ["erl"]},
+    {name: "Fortran", mime: "text/x-fortran", mode: "fortran", ext: ["f", "for", "f77", "f90"]},
+    {name: "F#", mime: "text/x-fsharp", mode: "mllike", ext: ["fs"], alias: ["fsharp"]},
+    {name: "Gas", mime: "text/x-gas", mode: "gas", ext: ["s"]},
+    {name: "Gherkin", mime: "text/x-feature", mode: "gherkin", ext: ["feature"]},
+    {name: "GitHub Flavored Markdown", mime: "text/x-gfm", mode: "gfm"},
+    {name: "Go", mime: "text/x-go", mode: "go", ext: ["go"]},
+    {name: "Groovy", mime: "text/x-groovy", mode: "groovy", ext: ["groovy"]},
+    {name: "HAML", mime: "text/x-haml", mode: "haml", ext: ["haml"]},
+    {name: "Haskell", mime: "text/x-haskell", mode: "haskell", ext: ["hs"]},
+    {name: "Haxe", mime: "text/x-haxe", mode: "haxe", ext: ["hx"]},
+    {name: "HXML", mime: "text/x-hxml", mode: "haxe", ext: ["hxml"]},
+    {name: "ASP.NET", mime: "application/x-aspx", mode: "htmlembedded", ext: ["aspx"], alias: ["asp", "aspx"]},
+    {name: "HTML", mime: "text/html", mode: "htmlmixed", ext: ["html", "htm"], alias: ["xhtml"]},
+    {name: "HTTP", mime: "message/http", mode: "http"},
+    {name: "IDL", mime: "text/x-idl", mode: "idl", ext: ["pro"]},
+    {name: "Jade", mime: "text/x-jade", mode: "jade", ext: ["jade"]},
+    {name: "Java", mime: "text/x-java", mode: "clike", ext: ["java"]},
+    {name: "Java Server Pages", mime: "application/x-jsp", mode: "htmlembedded", ext: ["jsp"], alias: ["jsp"]},
+    {name: "JavaScript", mimes: ["text/javascript", "text/ecmascript", "application/javascript", "application/x-javascript", "application/ecmascript"],
+     mode: "javascript", ext: ["js"], alias: ["ecmascript", "js", "node"]},
+    {name: "JSON", mimes: ["application/json", "application/x-json"], mode: "javascript", ext: ["json", "map"], alias: ["json5"]},
+    {name: "JSON-LD", mime: "application/ld+json", mode: "javascript", alias: ["jsonld"]},
+    {name: "Jinja2", mime: "null", mode: "jinja2"},
+    {name: "Julia", mime: "text/x-julia", mode: "julia", ext: ["jl"]},
+    {name: "Kotlin", mime: "text/x-kotlin", mode: "kotlin", ext: ["kt"]},
+    {name: "LESS", mime: "text/x-less", mode: "css", ext: ["less"]},
+    {name: "LiveScript", mime: "text/x-livescript", mode: "livescript", ext: ["ls"], alias: ["ls"]},
+    {name: "Lua", mime: "text/x-lua", mode: "lua", ext: ["lua"]},
+    {name: "Markdown", mime: "text/x-markdown", mode: "markdown", ext: ["markdown", "md", "mkd"]},
+    {name: "mIRC", mime: "text/mirc", mode: "mirc"},
+    {name: "MariaDB SQL", mime: "text/x-mariadb", mode: "sql"},
+    {name: "Modelica", mime: "text/x-modelica", mode: "modelica", ext: ["mo"]},
+    {name: "MS SQL", mime: "text/x-mssql", mode: "sql"},
+    {name: "MySQL", mime: "text/x-mysql", mode: "sql"},
+    {name: "Nginx", mime: "text/x-nginx-conf", mode: "nginx"},
+    {name: "NTriples", mime: "text/n-triples", mode: "ntriples", ext: ["nt"]},
+    {name: "Objective C", mime: "text/x-objectivec", mode: "clike", ext: ["m", "mm"]},
+    {name: "OCaml", mime: "text/x-ocaml", mode: "mllike", ext: ["ml", "mli", "mll", "mly"]},
+    {name: "Octave", mime: "text/x-octave", mode: "octave", ext: ["m"]},
+    {name: "Pascal", mime: "text/x-pascal", mode: "pascal", ext: ["p", "pas"]},
+    {name: "PEG.js", mime: "null", mode: "pegjs"},
+    {name: "Perl", mime: "text/x-perl", mode: "perl", ext: ["pl", "pm"]},
+    {name: "PHP", mime: "application/x-httpd-php", mode: "php", ext: ["php", "php3", "php4", "php5", "phtml"]},
+    {name: "Pig", mime: "text/x-pig", mode: "pig"},
+    {name: "Plain Text", mime: "text/plain", mode: "null", ext: ["txt", "text", "conf", "def", "list", "log"]},
+    {name: "PLSQL", mime: "text/x-plsql", mode: "sql"},
+    {name: "Properties files", mime: "text/x-properties", mode: "properties", ext: ["properties", "ini", "in"], alias: ["ini", "properties"]},
+    {name: "Python", mime: "text/x-python", mode: "python", ext: ["py", "pyw"]},
+    {name: "Puppet", mime: "text/x-puppet", mode: "puppet", ext: ["pp"]},
+    {name: "Q", mime: "text/x-q", mode: "q", ext: ["q"]},
+    {name: "R", mime: "text/x-rsrc", mode: "r", ext: ["r"], alias: ["rscript"]},
+    {name: "reStructuredText", mime: "text/x-rst", mode: "rst", ext: ["rst"], alias: ["rst"]},
+    {name: "RPM Changes", mime: "text/x-rpm-changes", mode: "rpm"},
+    {name: "RPM Spec", mime: "text/x-rpm-spec", mode: "rpm", ext: ["spec"]},
+    {name: "Ruby", mime: "text/x-ruby", mode: "ruby", ext: ["rb"], alias: ["jruby", "macruby", "rake", "rb", "rbx"]},
+    {name: "Rust", mime: "text/x-rustsrc", mode: "rust", ext: ["rs"]},
+    {name: "Sass", mime: "text/x-sass", mode: "sass", ext: ["sass"]},
+    {name: "Scala", mime: "text/x-scala", mode: "clike", ext: ["scala"]},
+    {name: "Scheme", mime: "text/x-scheme", mode: "scheme", ext: ["scm", "ss"]},
+    {name: "SCSS", mime: "text/x-scss", mode: "css", ext: ["scss"]},
+    {name: "Shell", mime: "text/x-sh", mode: "shell", ext: ["sh", "ksh", "bash"], alias: ["bash", "sh", "zsh"]},
+    {name: "Sieve", mime: "application/sieve", mode: "sieve"},
+    {name: "Slim", mimes: ["text/x-slim", "application/x-slim"], mode: "slim"},
+    {name: "Smalltalk", mime: "text/x-stsrc", mode: "smalltalk", ext: ["st"]},
+    {name: "Smarty", mime: "text/x-smarty", mode: "smarty", ext: ["tpl"]},
+    {name: "SmartyMixed", mime: "text/x-smarty", mode: "smartymixed"},
+    {name: "Solr", mime: "text/x-solr", mode: "solr"},
+    {name: "Soy", mime: "text/x-soy", mode: "soy", ext: ["soy"], alias: ["closure template"]},
+    {name: "SPARQL", mime: "application/sparql-query", mode: "sparql", ext: ["rq", "sparql"], alias: ["sparul"]},
+    {name: "Spreadsheet", mime: "text/x-spreadsheet", mode: "spreadsheet", alias: ["excel", "formula"]},
+    {name: "SQL", mime: "text/x-sql", mode: "sql", ext: ["sql"]},
+    {name: "MariaDB", mime: "text/x-mariadb", mode: "sql"},
+    {name: "sTeX", mime: "text/x-stex", mode: "stex"},
+    {name: "LaTeX", mime: "text/x-latex", mode: "stex", ext: ["text", "ltx"], alias: ["tex"]},
+    {name: "SystemVerilog", mime: "text/x-systemverilog", mode: "verilog", ext: ["v"]},
+    {name: "Tcl", mime: "text/x-tcl", mode: "tcl", ext: ["tcl"]},
+    {name: "Textile", mime: "text/x-textile", mode: "textile"},
+    {name: "TiddlyWiki ", mime: "text/x-tiddlywiki", mode: "tiddlywiki"},
+    {name: "Tiki wiki", mime: "text/tiki", mode: "tiki"},
+    {name: "TOML", mime: "text/x-toml", mode: "toml"},
+    {name: "Tornado", mime: "text/x-tornado", mode: "tornado"},
+    {name: "Turtle", mime: "text/turtle", mode: "turtle", ext: ["ttl"]},
+    {name: "TypeScript", mime: "application/typescript", mode: "javascript", ext: ["ts"], alias: ["ts"]},
+    {name: "VB.NET", mime: "text/x-vb", mode: "vb", ext: ["vb"]},
+    {name: "VBScript", mime: "text/vbscript", mode: "vbscript"},
+    {name: "Velocity", mime: "text/velocity", mode: "velocity", ext: ["vtl"]},
+    {name: "Verilog", mime: "text/x-verilog", mode: "verilog", ext: ["v"]},
+    {name: "XML", mimes: ["application/xml", "text/xml"], mode: "xml", ext: ["xml", "xsl", "xsd"], alias: ["rss", "wsdl", "xsd"]},
+    {name: "XQuery", mime: "application/xquery", mode: "xquery", ext: ["xy", "xquery"]},
+    {name: "YAML", mime: "text/x-yaml", mode: "yaml", ext: ["yaml"], alias: ["yml"]},
+    {name: "Z80", mime: "text/x-z80", mode: "z80", ext: ["z80"]}
+  ];
+  // Ensure all modes have a mime property for backwards compatibility
+  for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
+    var info = CodeMirror.modeInfo[i];
+    if (info.mimes) info.mime = info.mimes[0];
+  }
+
+  CodeMirror.findModeByMIME = function(mime) {
+    for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
+      var info = CodeMirror.modeInfo[i];
+      if (info.mime == mime) return info;
+      if (info.mimes) for (var j = 0; j < info.mimes.length; j++)
+        if (info.mimes[j] == mime) return info;
+    }
+  };
+
+  CodeMirror.findModeByExtension = function(ext) {
+    for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
+      var info = CodeMirror.modeInfo[i];
+      if (info.ext) for (var j = 0; j < info.ext.length; j++)
+        if (info.ext[j] == ext) return info;
+    }
+  };
+
+  CodeMirror.findModeByName = function(name) {
+    name = name.toLowerCase();
+    for (var i = 0; i < CodeMirror.modeInfo.length; i++) {
+      var info = CodeMirror.modeInfo[i];
+      if (info.name.toLowerCase() == name) return info;
+      if (info.alias) for (var j = 0; j < info.alias.length; j++)
+        if (info.alias[j].toLowerCase() == name) return info;
+    }
+  };
 });
 
 // clike.js
