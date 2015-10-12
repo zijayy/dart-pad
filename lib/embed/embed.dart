@@ -2,8 +2,6 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-//Currently not in use
-
 library dart_pad.embed_ui;
 
 import 'dart:async';
@@ -13,23 +11,23 @@ import 'package:logging/logging.dart';
 import 'package:route_hierarchical/client.dart';
 
 import '../completion.dart';
-import '../elements/elements.dart';
-import '../dart_pad.dart';
-import '../documentation.dart';
 import '../context.dart';
 import '../core/dependencies.dart';
 import '../core/keys.dart';
 import '../core/modules.dart';
+import '../dart_pad.dart';
+import '../documentation.dart';
 import '../editing/editor.dart';
+import '../elements/elements.dart';
 import '../modules/codemirror_module.dart';
-import '../modules/dartservices_module.dart';
 import '../modules/dart_pad_module.dart';
+import '../modules/dartservices_module.dart';
 import '../polymer/base.dart';
 import '../polymer/iron.dart';
 import '../polymer/paper.dart';
+import '../services/_dartpadsupportservices.dart';
 import '../services/common.dart';
 import '../services/dartservices.dart';
-import '../services/_dartpadsupportservices.dart';
 import '../services/execution_iframe.dart';
 import '../sharing/gists.dart';
 import '../src/ga.dart';
@@ -73,7 +71,7 @@ class PlaygroundMobile {
   PaperDialog _resetDialog;
   PaperDialog _exportDialog;
   PolymerElement _output;
-  PaperProgress _editProgress;
+  PaperProgress _runProgress;
 
   DivElement _docPanel;
 
@@ -150,7 +148,7 @@ class PlaygroundMobile {
     } else {
       _errorsToast = new PaperToast();
     }
-    _errorsToast.duration = 100000;
+    _errorsToast.duration = 1000000;
   }
 
   void registerResetToast() {
@@ -187,8 +185,12 @@ class PlaygroundMobile {
   void registerDocPanel() {
     if ($('#documentation') != null) {
       _docPanel = $('#documentation');
+
+      // TODO: This should be done using encapsulation in the Polymer element.
       _docPanel.innerHtml =
-          "<div class='default-text-div layout horizontal center-center'><span class='default-text'>Documentation</span></div>";
+          "<div class='default-text-div layout horizontal center-center'>"
+          "<span class='default-text'>Documentation</span>"
+          "</div>";
     } else {
       _docPanel = new DivElement();
     }
@@ -206,8 +208,8 @@ class PlaygroundMobile {
   }
 
   void registerEditProgress() {
-    if ($("#edit-progress") != null) {
-      _editProgress = new PaperProgress.from($("#edit-progress"));
+    if ($("#run-progress") != null) {
+      _runProgress = new PaperProgress.from($("#run-progress"));
     }
   }
 
@@ -273,7 +275,7 @@ class PlaygroundMobile {
     }
   }
 
-  //Console must exist
+  // Console must exist.
   void registerConsole() {
     _output = new PolymerElement.from($("#console"));
   }
@@ -557,9 +559,9 @@ class PlaygroundMobile {
     ga.sendEvent('embed', 'run');
     _runButton.disabled = true;
 
-    if (_editProgress != null) {
-      _editProgress.indeterminate = true;
-      _editProgress.hidden(false);
+    if (_runProgress != null) {
+      _runProgress.indeterminate = true;
+      _runProgress.hidden(false);
     }
 
     if (_hasStoredRequest) {
@@ -574,9 +576,9 @@ class PlaygroundMobile {
         _showError('Error compiling to JavaScript', '${e}');
       }
       _runButton.disabled = false;
-      if (_editProgress != null) {
-        _editProgress.hidden(true);
-        _editProgress.indeterminate = false;
+      if (_runProgress != null) {
+        _runProgress.hidden(true);
+        _runProgress.indeterminate = false;
       }
       return;
     }
@@ -598,9 +600,9 @@ class PlaygroundMobile {
       _showError('Error compiling to JavaScript', '${e}');
     }).whenComplete(() {
       _runButton.disabled = false;
-      if (_editProgress != null) {
-        _editProgress.hidden(true);
-        _editProgress.indeterminate = false;
+      if (_runProgress != null) {
+        _runProgress.hidden(true);
+        _runProgress.indeterminate = false;
       }
     });
   }
@@ -671,8 +673,12 @@ class PlaygroundMobile {
 
   void _clearOutput() {
     _output.text = '';
+
+    // TODO: This should be done using encapsulation in the Polymer element.
     _output.element.innerHtml =
-        "<div class='consoleTitle default-text-div layout horizontal center-center'><span class='default-text'>Console output</span></div>";
+        "<div class='consoleTitle default-text-div layout horizontal center-center'>"
+        "<span class='default-text'>Console output</span>"
+        "</div>";
   }
 
   void _showOutput(String message, {bool error: false}) {

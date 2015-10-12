@@ -24,6 +24,12 @@ analyze() {
   new PubApp.global('tuneup')..run(['check']);
 }
 
+@Task('Analyze the source code with the ddc compiler')
+ddc() {
+  PubApp ddc = new PubApp.global('dev_compiler');
+  ddc.run(['web/scripts/main.dart']);
+}
+
 @Task()
 testCli() => new TestRunner().testAsync(platformSelector: 'vm');
 
@@ -32,7 +38,7 @@ testCli() => new TestRunner().testAsync(platformSelector: 'vm');
 testWeb() => new TestRunner().testAsync(platformSelector: 'chrome');
 
 @Task('Run bower')
-bower() => run('bower', arguments: ['install']);
+bower() => run('bower', arguments: ['install', '--force-latest']);
 
 @Task('Build the `web/index.html` entrypoint')
 @Depends(bower)
@@ -44,7 +50,9 @@ build() {
   new FilePath('packages/codemirror/codemirror.js')
       .copy(_webDir.join('scripts'));
 
-  Pub.build(directories: ['web', 'test']);
+  // Speed up the build, from 140s to 100s.
+  //Pub.build(directories: ['web', 'test']);
+  Pub.build(directories: ['web']);
 
   FilePath mainFile = _buildDir.join('web', 'scripts/main.dart.js');
   log('${mainFile} compiled to ${_printSize(mainFile)}');
@@ -53,7 +61,7 @@ build() {
   log('${mobileFile.path} compiled to ${_printSize(mobileFile)}');
 
   FilePath testFile = _buildDir.join('test', 'web.dart.js');
-  log('${testFile.path} compiled to ${_printSize(testFile)}');
+  if (testFile.exists) log('${testFile.path} compiled to ${_printSize(testFile)}');
 
   FilePath embedFile = _buildDir.join('web', 'scripts/embed.dart.js');
   log('${mainFile} compiled to ${_printSize(embedFile)}');

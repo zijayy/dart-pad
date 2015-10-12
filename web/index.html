@@ -29,7 +29,6 @@
     <link href="packages/codemirror/theme/zenburn.css" rel="stylesheet" media="screen">
     <link href="packages/dart_pad/editing/editor_codemirror.css" rel="stylesheet" media="screen">
 
-
     <script src="scripts/codemirror.js" defer></script>
     <script type="application/dart" src="scripts/main.dart" defer></script>
     <script src="scripts/ga.js" async></script>
@@ -52,7 +51,6 @@
           <option value="0">Samples</option>
           <option disabled></option>
           <option value="b51ea7c04322042b582a">Bootstrap</option>
-          <option value="0dfeb25a33be007e1d0f">Clock</option>
           <option value="74e990d984faad26dea0">Fibonacci</option>
           <option value="33706e19df021e52d98c">Hello World</option>
           <option value="9126d5d48ebabf5bf547">Hello World HTML</option>
@@ -95,6 +93,7 @@
 
       <div class="view" flex two layout vertical>
         <div class="view" flex two layout vertical>
+          <div id="frame-overlay"></div>
           <div class="header" layout horizontal wrap>
             <div flex></div>
             <li><a id="resulttab"><span>HTML Output</span></a></li>
@@ -114,7 +113,6 @@
           <div id="documentation" flex layout vertical></div>
           <div id="issues"></div>
         </div>
-        <div id="frame_overlay"></div>
       </div>
     </section>
 
