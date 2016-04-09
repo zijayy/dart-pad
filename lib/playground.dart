@@ -114,8 +114,8 @@ class Playground implements GistContainer, GistController {
     });
 
     DButton shareButton = new DButton(querySelector('#sharebutton'));
-    shareButton.onClick.listen((e) => _createSummary()
-        .then((String sum) => sharingDialog.showWithSummary(sum)));
+    shareButton.onClick.listen((Event e) => _createSummary()
+        .then((GistSummary summary) => sharingDialog.showWithSummary(summary)));
     runButton = new DButton(querySelector('#runbutton'));
     runButton.onClick.listen((e) {
       _handleRun();
@@ -160,7 +160,7 @@ class Playground implements GistContainer, GistController {
           .version()
           .timeout(new Duration(seconds: 2))
           .then((VersionResponse ver) {
-        print("Dart SDK version ${ver.sdkVersion}; full version: ${ver.sdkVersionFull}");
+        print("Dart SDK version ${ver.sdkVersion} (${ver.sdkVersionFull})");
         new AboutDialog(ver.sdkVersion)..show();
       }).catchError((e) {
         new AboutDialog()..show();
@@ -187,6 +187,7 @@ class Playground implements GistContainer, GistController {
     // have halting issues (#384).
     bool loadedFromSaved = false;
     Uri url = Uri.parse(window.location.toString());
+
     if (url.hasQuery &&
         url.queryParameters['id'] != null &&
         isLegalGistId(url.queryParameters['id'])) {
@@ -243,6 +244,7 @@ class Playground implements GistContainer, GistController {
 
   void showGist(RouteEnterEvent event) {
     String gistId = event.parameters['gist'];
+
     _clearOutput();
 
     if (!isLegalGistId(gistId)) {
@@ -405,7 +407,7 @@ class Playground implements GistContainer, GistController {
       docHandler.generateDoc(_docPanel);
     }, "Documentation");
 
-    keys.bind(['alt-enter', 'ctrl-1'], () {
+    keys.bind(['alt-enter'], () {
       editor.showCompletions(onlyShowFixes: true);
     }, "Quick fix");
 
@@ -611,7 +613,7 @@ class Playground implements GistContainer, GistController {
     }
   }
 
-  Future<String> _createSummary() {
+  Future<GistSummary> _createSummary() {
     return dartSupportServices.getUnusedMappingId().then((UuidContainer id) {
       _mappingId = id.uuid;
       SourcesRequest input = new SourcesRequest()
@@ -622,7 +624,10 @@ class Playground implements GistContainer, GistController {
         };
       return dartServices.summarize(input);
     }).then((SummaryText summary) {
-      return '${summary.text}\n\nFind this at [dartpad.dartlang.org/?source=${_mappingId}](https://dartpad.dartlang.org/?source=${_mappingId}).';
+      return new GistSummary(
+        summary.text,
+        'Find this at [dartpad.dartlang.org/?source=${_mappingId}](https://dartpad.dartlang.org/?source=${_mappingId}).'
+      );
     }).catchError((e) {
       _logger.severe(e);
     });
