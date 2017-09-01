@@ -43,6 +43,7 @@
       <div>
         <button type="button" id="newbutton" class="button">New Pad…</button>
         <button type="button" id="resetbutton" class="button" disabled>Reset…</button>
+        <button type="button" id="formatbutton" class="button">Format</button>
       </div>
       <div class="header-gist-name" flex></div>
       <div>
@@ -119,18 +120,17 @@
     </section>
 
     <footer layout horizontal>
-      <div>
-        <a href="https://www.dartlang.org/" class="footer-item"
-            target="dartlang">www.dartlang.org</a>
-        <a href="https://api.dartlang.org/" target="dartlang">API documentation</a>
-      </div>
-      <div flex></div>
       <div id="keyboard-button" class="keyboard footer-item"></div>
       <div>
         <a href="https://github.com/dart-lang/dart-pad/wiki/Privacy-Policy"
             target="repo" class="footer-item">Privacy policy</a>
         <a href="https://github.com/dart-lang/dart-pad/issues"
             target="repo">Send feedback</a>
+      </div>
+      <div flex></div>
+      <div>
+        <input type="checkbox" id="strongmode" checked> Strong mode</input>
+        (<a href="https://www.dartlang.org/guides/language/sound-dart" target="_blank">what's this?</a>)
       </div>
     </footer>
   </body>

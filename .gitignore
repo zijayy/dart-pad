@@ -11,8 +11,6 @@ packages
 *.js.map
 
 .settings/
-
-lib/bower/
 .DS_Store
 
 # Python generated files
@@ -24,3 +22,6 @@ web/mdetect.py
 web/scripts/codemirror.js
 
 last_prod/
+
+.idea/
+dart-pad.iml

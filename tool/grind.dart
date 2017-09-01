@@ -45,9 +45,8 @@ build() {
   // Copy our third party python code into web/.
   new FilePath('third_party/mdetect/mdetect.py').copy(_webDir);
 
-  // Copy the codemirror javascript into web/scripts.
-  new FilePath('packages/codemirror/codemirror.js')
-      .copy(_webDir.join('scripts'));
+  // Copy the codemirror script into web/scripts.
+  new FilePath(_getCodeMirrorScriptPath()).copy(_webDir.join('scripts'));
 
   // Speed up the build, from 140s to 100s.
   //Pub.build(directories: ['web', 'test']);
@@ -60,31 +59,24 @@ build() {
   log('${mobileFile.path} compiled to ${_printSize(mobileFile)}');
 
   FilePath testFile = _buildDir.join('test', 'web.dart.js');
-  if (testFile.exists) log('${testFile.path} compiled to ${_printSize(testFile)}');
+  if (testFile.exists)
+    log('${testFile.path} compiled to ${_printSize(testFile)}');
 
   FilePath embedFile = _buildDir.join('web', 'scripts/embed.dart.js');
   log('${mainFile} compiled to ${_printSize(embedFile)}');
 
-  // Delete the build/web/packages directory.
-  delete(getDir('build/web/packages'));
-
-  // Reify the symlinks.
-  // cp -R -L packages build/web/packages
-  run('cp', arguments: ['-R', '-L', 'packages', 'build/web/packages']);
-
   // Remove .dart files.
   int count = 0;
 
-  for (FileSystemEntity entity in getDir('build/web/packages').listSync(
-    recursive: true, followLinks: false
-  )) {
+  for (FileSystemEntity entity in getDir('build/web/packages')
+      .listSync(recursive: true, followLinks: false)) {
     if (entity is! File) continue;
     if (!entity.path.endsWith('.dart')) continue;
     count++;
     entity.deleteSync();
   }
 
-  print('Removed $count Dart files');
+  log('Removed $count Dart files');
 
   // Run vulcanize.
   // Imports vulcanized, not inlined for IE support
@@ -97,6 +89,17 @@ build() {
 
   return _uploadCompiledStats(
       mainFile.asFile.lengthSync(), mobileFile.asFile.lengthSync());
+}
+
+/// Return the path for `packages/codemirror/codemirror.js`.
+String _getCodeMirrorScriptPath() {
+  Map<String, String> packageToUri = {};
+  for (String line in new File('.packages').readAsLinesSync()) {
+    int index = line.indexOf(':');
+    packageToUri[line.substring(0, index)] = line.substring(index + 1);
+  }
+  String packagePath = Uri.parse(packageToUri['codemirror']).path;
+  return '${packagePath}codemirror.js';
 }
 
 // Run vulcanize

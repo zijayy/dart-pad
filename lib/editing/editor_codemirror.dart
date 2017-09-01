@@ -5,10 +5,10 @@
 library editor.codemirror;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js';
 import 'dart:math';
-import 'dart:convert';
 
 import 'package:codemirror/codemirror.dart' hide Position;
 import 'package:codemirror/codemirror.dart' as pos show Position;
@@ -21,13 +21,15 @@ export 'editor.dart';
 
 final CodeMirrorFactory codeMirrorFactory = new CodeMirrorFactory._();
 
-final _gutterId = 'CodeMirror-lint-markers';
+final String _gutterId = 'CodeMirror-lint-markers';
 
 class CodeMirrorFactory extends EditorFactory {
   //static final String cssRef = 'packages/dart_pad/editing/editor_codemirror.css';
   //static final String jsRef = 'packages/codemirror/codemirror.js';
 
   CodeMirrorFactory._();
+
+  String get version => CodeMirror.version;
 
   List<String> get modes => CodeMirror.MODES;
   List<String> get themes => CodeMirror.THEMES;
@@ -39,7 +41,7 @@ class CodeMirrorFactory extends EditorFactory {
   }
 
   Future init() {
-    List futures = [];
+    List<Future> futures = [];
     //html.Element head = html.querySelector('html head');
 
 //    // <link href="packages/dart_pad/editing/editor_codemirror.css"
@@ -82,7 +84,7 @@ class CodeMirrorFactory extends EditorFactory {
     }
 
     CodeMirror editor = new CodeMirror.fromElement(element, options: options);
-    editor.addCommand('goLineLeft', _handleGoLineLeft);
+    CodeMirror.addCommand('goLineLeft', _handleGoLineLeft);
     return new _CodeMirrorEditor._(this, editor);
   }
 
@@ -281,6 +283,10 @@ class _CodeMirrorDocument extends Document {
     doc.markClean();
     // TODO: Switch over to non-JS interop when this method is exposed.
     doc.jsProxy.callMethod('clearHistory');
+  }
+
+  void updateValue(String str) {
+    doc.setValue(str);
   }
 
   ed.Position get cursor => _posFromPos(doc.getCursor());

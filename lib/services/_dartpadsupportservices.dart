@@ -1,10 +1,10 @@
 // This is a generated file (see the discoveryapis_generator project).
 
-library services.P_dartpadsupportservices.v1;
+library dart_services.P_dartpadsupportservices.v1;
 
-import 'dart:core' as core;
 import 'dart:async' as async;
 import 'dart:convert' as convert;
+import 'dart:core' as core;
 
 import 'package:_discoveryapis_commons/_discoveryapis_commons.dart' as commons;
 import 'package:http/http.dart' as http;
@@ -19,9 +19,9 @@ class P_dartpadsupportservicesApi {
 
   P_dartpadsupportservicesApi(http.Client client,
       {core.String rootUrl: "/",
-      core.String servicePath: "api/_dartpadsupportservices/v1/"})
+        core.String servicePath: "api/_dartpadsupportservices/v1/"})
       : _requester =
-            new commons.ApiRequester(client, rootUrl, servicePath, USER_AGENT);
+  new commons.ApiRequester(client, rootUrl, servicePath, USER_AGENT);
 
   /**
    * Store a gist dataset to be retrieved.
