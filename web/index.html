@@ -7,6 +7,7 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <link rel="shortcut icon" href="/dart-64.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,8 +31,7 @@
     <link href="packages/dart_pad/editing/editor_codemirror.css" rel="stylesheet" media="screen">
     <script src="scripts/codemirror.js" defer></script>
 
-    <script defer src="scripts/main.dart" type="application/dart"></script>
-    <script defer src="packages/browser/dart.js"></script>
+    <script defer src="scripts/main.dart.js"></script>
 
     <script src="scripts/ga.js" defer></script>
     <script src="scripts/polymerpatch.js" defer></script>
@@ -53,13 +53,9 @@
         <select id="samples" required="false">
           <option value="0">Samples</option>
           <option disabled></option>
-          <option value="b51ea7c04322042b582a">Bootstrap</option>
-          <option value="74e990d984faad26dea0">Fibonacci</option>
           <option value="33706e19df021e52d98c">Hello World</option>
-          <option value="9126d5d48ebabf5bf547">Hello World HTML</option>
-          <option value="72d83fe97bfc8e735607">Solar</option>
-          <option value="9e42aabfcc15c81a0406">Spirodraw</option>
-          <option value="9d2dd2ce17981ecacadd">Sunflower</option>
+          <option value="74e990d984faad26dea0">Fibonacci</option>
+          <option value="49bde0c1ed780decc902f3d4d06d8f0c">Sunflower</option>
           <option value="479ecba5a56fd706b648">WebSockets</option>
         </select>
       </div>
@@ -128,10 +124,7 @@
             target="repo">Send feedback</a>
       </div>
       <div flex></div>
-      <div>
-        <input type="checkbox" id="strongmode"> Strong mode</input>
-        (<a href="https://www.dartlang.org/guides/language/sound-dart" target="_blank">what's this?</a>)
-      </div>
+      <div id="dartpad_version"> </div>
     </footer>
   </body>
 </html>

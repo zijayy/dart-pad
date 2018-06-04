@@ -7,7 +7,6 @@ library playground;
 import 'dart:async';
 import 'dart:html' hide Document;
 
-import 'package:frappe/frappe.dart' as frappe;
 import 'package:logging/logging.dart';
 import 'package:route_hierarchical/client.dart';
 
@@ -25,7 +24,6 @@ import 'elements/elements.dart';
 import 'modules/codemirror_module.dart';
 import 'modules/dart_pad_module.dart';
 import 'modules/dartservices_module.dart';
-import 'parameter_popup.dart';
 import 'services/_dartpadsupportservices.dart';
 import 'services/common.dart';
 import 'services/dartservices.dart';
@@ -47,9 +45,13 @@ void init() {
 
 class Playground implements GistContainer, GistController {
   DivElement get _editpanel => querySelector('#editpanel');
+
   DivElement get _outputpanel => querySelector('#output');
+
   IFrameElement get _frame => querySelector('#frame');
+
   bool get _isCompletionActive => editor.completionActive;
+
   DivElement get _docPanel => querySelector('#documentation');
 
   DButton runButton;
@@ -71,11 +73,9 @@ class Playground implements GistContainer, GistController {
 
   // We store the last returned shared gist; it's used to update the url.
   Gist _overrideNextRouteGist;
-  ParameterPopup paramPopup;
   DocHandler docHandler;
 
   String _mappingId;
-  ModuleManager modules = new ModuleManager();
 
   Playground() {
     sourceTabController = new TabController();
@@ -115,8 +115,14 @@ class Playground implements GistContainer, GistController {
     });
 
     DButton shareButton = new DButton(querySelector('#sharebutton'));
-    shareButton.onClick.listen((Event e) => _createSummary()
-        .then((GistSummary summary) => sharingDialog.showWithSummary(summary)));
+
+    shareButton.onClick.listen((Event e) => window.open(
+        "https://github.com/dart-lang/dart-pad/wiki/Sharing-Guide",
+        '_sharing'));
+
+    // Sharing is currently disabled pending establishing OAuth2 configurations with Github.
+    // shareButton.onClick.listen((Event e) => _createSummary()
+    //    .then((GistSummary summary) => sharingDialog.showWithSummary(summary)));
 
     formatButton = new DButton(querySelector('#formatbutton'));
     formatButton.onClick.listen((Event e) => _format());
@@ -147,9 +153,8 @@ class Playground implements GistContainer, GistController {
 
     // If there was a change, and the gist is dirty, write the gist's contents
     // to storage.
-    frappe.Property gistChanged =
-        new frappe.Property.fromStream(mutableGist.onChanged);
-    gistChanged.debounce(new Duration(milliseconds: 100)).listen((_) {
+    debounceStream(mutableGist.onChanged, new Duration(milliseconds: 100))
+        .listen((_) {
       if (mutableGist.dirty) {
         _gistStorage.setStoredGist(mutableGist.createGist());
       }
@@ -161,25 +166,30 @@ class Playground implements GistContainer, GistController {
     // Show the about box on title clicks.
     querySelector('div.header-title').onClick.listen((e) {
       e.preventDefault();
-
-      dartServices
-          .version()
-          .timeout(new Duration(seconds: 2))
-          .then((VersionResponse ver) {
-        print("Dart SDK version ${ver.sdkVersion} (${ver.sdkVersionFull})");
-        print('CodeMirror: ${CodeMirrorModule.version}');
-        new AboutDialog(ver.sdkVersion)..show();
-      }).catchError((e) {
-        new AboutDialog()..show();
-      });
+      _showAboutBox();
     });
 
-    querySelector('#strongmode').onChange.listen((e) {
-      _performAnalysis();
+    // Show the about box on version text clicks.
+    querySelector('#dartpad_version').onClick.listen((e) {
+      e.preventDefault();
+      _showAboutBox();
     });
 
     _initModules().then((_) {
       _initPlayground();
+    });
+  }
+
+  void _showAboutBox() {
+    dartServices
+        .version()
+        .timeout(new Duration(seconds: 2))
+        .then((VersionResponse ver) {
+      print("Dart SDK version ${ver.sdkVersion} (${ver.sdkVersionFull})");
+      print('CodeMirror: ${CodeMirrorModule.version}');
+      new AboutDialog(ver.sdkVersionFull)..show();
+    }).catchError((e) {
+      new AboutDialog()..show();
     });
   }
 
@@ -357,8 +367,9 @@ class Playground implements GistContainer, GistController {
   }
 
   Future _initModules() {
+    ModuleManager modules = new ModuleManager();
+
     modules.register(new DartPadModule());
-    //modules.register(new MockDartServicesModule());
     modules.register(new DartServicesModule());
     modules.register(new DartSupportServicesModule());
     modules.register(new CodeMirrorModule());
@@ -519,52 +530,41 @@ class Playground implements GistContainer, GistController {
     router.root.addRoute(name: 'gist', path: '/:gist', enter: showGist);
     router.listen();
 
-    // Set up development options.
-    options.registerOption('autopopup_code_completion', 'false');
-    options.registerOption('parameter_popup', 'false');
-
-    if (options.getValueBool("parameter_popup")) {
-      paramPopup = new ParameterPopup(context, editor);
-    }
-
     docHandler = new DocHandler(editor, _context);
+
+    dartServices.version().then((VersionResponse version) {
+      // "Based on Dart SDK 1.25.0-dev"
+      String versionText = "Based on Dart SDK ${version.sdkVersionFull}";
+      querySelector('#dartpad_version').text = versionText;
+    }).catchError((e) => null);
 
     _finishedInit();
   }
 
-  _finishedInit() {
+  void _finishedInit() {
     // Clear the splash.
     DSplash splash = new DSplash(querySelector('div.splash'));
     splash.hide();
   }
 
-  _handleAutoCompletion(KeyboardEvent e) {
+  final RegExp cssSymbolRegexp = new RegExp(r"[A-Z]");
+
+  void _handleAutoCompletion(KeyboardEvent e) {
     if (context.focusedEditor == 'dart' && editor.hasFocus) {
       if (e.keyCode == KeyCode.PERIOD) {
         editor.showCompletions(autoInvoked: true);
       }
     }
 
-    if (!options.getValueBool('autopopup_code_completion') ||
-        _isCompletionActive ||
-        !editor.hasFocus) {
-      return;
-    }
-
-    if (context.focusedEditor == 'dart') {
-      RegExp exp = new RegExp(r"[A-Z]");
-      if (exp.hasMatch(new String.fromCharCode(e.keyCode))) {
-        editor.showCompletions(autoInvoked: true);
-      }
-    } else if (context.focusedEditor == "html") {
-      // TODO: Autocompletion for attributes.
-      if (printKeyEvent(e) == "shift-,") {
-        editor.showCompletions(autoInvoked: true);
-      }
-    } else if (context.focusedEditor == "css") {
-      RegExp exp = new RegExp(r"[A-Z]");
-      if (exp.hasMatch(new String.fromCharCode(e.keyCode))) {
-        editor.showCompletions(autoInvoked: true);
+    if (!_isCompletionActive && editor.hasFocus) {
+      if (context.focusedEditor == "html") {
+        if (printKeyEvent(e) == "shift-,") {
+          editor.showCompletions(autoInvoked: true);
+        }
+      } else if (context.focusedEditor == "css") {
+        if (cssSymbolRegexp.hasMatch(new String.fromCharCode(e.keyCode))) {
+          editor.showCompletions(autoInvoked: true);
+        }
       }
     }
   }
@@ -626,7 +626,7 @@ class Playground implements GistContainer, GistController {
     }
   }
 
-  Future<GistSummary> _createSummary() {
+  /* Future<GistSummary> _createSummary() {
     return dartSupportServices.getUnusedMappingId().then((UuidContainer id) {
       _mappingId = id.uuid;
       SourcesRequest input = new SourcesRequest()
@@ -642,20 +642,19 @@ class Playground implements GistContainer, GistController {
     }).catchError((e) {
       _logger.severe(e);
     });
-  }
+  } */
 
   /// Perform static analysis of the source code. Return whether the code
   /// analyzed cleanly (had no errors or warnings).
   Future<bool> _performAnalysis() {
-    bool strongMode = (querySelector('#strongmode') as InputElement).checked;
-
     SourceRequest input = new SourceRequest()
       ..source = _context.dartSource
-      ..strongMode = strongMode;
+      ..strongMode = strongModeDefault;
 
     Lines lines = new Lines(input.source);
 
-    Future<AnalysisResults> request = dartServices.analyze(input).timeout(serviceCallTimeout);
+    Future<AnalysisResults> request =
+        dartServices.analyze(input).timeout(serviceCallTimeout);
     _analysisRequest = request;
 
     return request.then((AnalysisResults result) {
@@ -706,7 +705,8 @@ class Playground implements GistContainer, GistController {
     SourceRequest input = new SourceRequest()..source = originalSource;
     formatButton.disabled = true;
 
-    Future<FormatResponse> request = dartServices.format(input).timeout(serviceCallTimeout);
+    Future<FormatResponse> request =
+        dartServices.format(input).timeout(serviceCallTimeout);
     return request.then((FormatResponse result) {
       busyLight.reset();
       formatButton.disabled = false;
@@ -888,20 +888,25 @@ class PlaygroundContext extends Context {
   }
 
   Document get dartDocument => _dartDoc;
+
   Document get htmlDocument => _htmlDoc;
+
   Document get cssDocument => _cssDoc;
 
   String get dartSource => _dartDoc.value;
+
   set dartSource(String value) {
     _dartDoc.value = value;
   }
 
   String get htmlSource => _htmlDoc.value;
+
   set htmlSource(String value) {
     _htmlDoc.value = value;
   }
 
   String get cssSource => _cssDoc.value;
+
   set cssSource(String value) {
     _cssDoc.value = value;
   }
@@ -933,15 +938,21 @@ class PlaygroundContext extends Context {
   }
 
   Stream get onCssDirty => _cssDirtyController.stream;
+
   Stream get onDartDirty => _dartDirtyController.stream;
+
   Stream get onHtmlDirty => _htmlDirtyController.stream;
 
   Stream get onCssReconcile => _cssReconcileController.stream;
+
   Stream get onDartReconcile => _dartReconcileController.stream;
+
   Stream get onHtmlReconcile => _htmlReconcileController.stream;
 
   void markCssClean() => _cssDoc.markClean();
+
   void markDartClean() => _dartDoc.markClean();
+
   void markHtmlClean() => _htmlDoc.markClean();
 
   /**
@@ -975,7 +986,7 @@ class GistFileProperty implements Property {
 
   GistFileProperty(this.file);
 
-  get() => file.content;
+  String get() => file.content;
 
   void set(value) {
     if (file.content != value) {
@@ -992,7 +1003,7 @@ class EditorDocumentProperty implements Property {
 
   EditorDocumentProperty(this.document, [this.debugName]);
 
-  get() => document.value;
+  String get() => document.value;
 
   void set(str) {
     document.value = str == null ? '' : str;

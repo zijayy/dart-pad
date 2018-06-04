@@ -2,14 +2,14 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// ignore_for_file: always_declare_return_types
+
 library dart_pad.grind;
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:git/git.dart';
 import 'package:grinder/grinder.dart';
-import 'package:librato/librato.dart';
 import 'package:yaml/yaml.dart' as yaml;
 
 final FilePath _buildDir = new FilePath('build');
@@ -40,6 +40,12 @@ testWeb() => new TestRunner().testAsync(platformSelector: 'chrome');
 @Task('Run bower')
 bower() => run('bower', arguments: ['install', '--force-latest']);
 
+@Task('Serve locally on port 8000')
+@Depends(build)
+serve() {
+  run('pub', arguments: ['run', 'dhttpd', '-p', '8000', '--path=build/web']);
+}
+
 @Task('Build the `web/index.html` entrypoint')
 build() {
   // Copy our third party python code into web/.
@@ -48,15 +54,23 @@ build() {
   // Copy the codemirror script into web/scripts.
   new FilePath(_getCodeMirrorScriptPath()).copy(_webDir.join('scripts'));
 
-  // Speed up the build, from 140s to 100s.
-  //Pub.build(directories: ['web', 'test']);
-  Pub.build(directories: ['web']);
+  // copy web/ resources
+  copyDirectory(webDir, joinDir(buildDir, ['web']));
+
+  // copy lib/ resources
+  copyDirectory(libDir, joinDir(buildDir, ['web', 'packages', 'dart_pad']));
+
+  // copy other package resources
+  copyPackageResources('codemirror', joinDir(buildDir, ['web']));
+
+  // Compile main scripts.
+  Dart2js.compile(joinFile(webDir, ['scripts', 'main.dart']),
+      outDir: joinDir(buildDir, ['web', 'scripts']), minify: true);
+  Dart2js.compile(joinFile(webDir, ['scripts', 'embed.dart']),
+      outDir: joinDir(buildDir, ['web', 'scripts']), minify: true);
 
   FilePath mainFile = _buildDir.join('web', 'scripts/main.dart.js');
   log('${mainFile} compiled to ${_printSize(mainFile)}');
-
-  FilePath mobileFile = _buildDir.join('web', 'scripts/mobile.dart.js');
-  log('${mobileFile.path} compiled to ${_printSize(mobileFile)}');
 
   FilePath testFile = _buildDir.join('test', 'web.dart.js');
   if (testFile.exists)
@@ -81,14 +95,32 @@ build() {
   // Run vulcanize.
   // Imports vulcanized, not inlined for IE support
   vulcanizeNoExclusion('scripts/imports.html');
-  vulcanize('mobile.html');
   vulcanize('index.html');
   vulcanize('embed-dart.html');
   vulcanize('embed-html.html');
   vulcanize('embed-inline.html');
+}
 
-  return _uploadCompiledStats(
-      mainFile.asFile.lengthSync(), mobileFile.asFile.lengthSync());
+void copyPackageResources(String packageName, Directory destDir) {
+  String text = new File('.packages').readAsStringSync();
+  for (String line in text.split('\n')) {
+    line = line.trim();
+    if (line.isEmpty) {
+      continue;
+    }
+    int index = line.indexOf(':');
+    String name = line.substring(0, index);
+    String location = line.substring(index + 1);
+    if (name == packageName && location.startsWith('file:')) {
+      Uri uri = Uri.parse(location);
+
+      copyDirectory(new Directory.fromUri(uri),
+          joinDir(destDir, ['packages', packageName]));
+      return;
+    }
+  }
+
+  fail('package $packageName not found in .packages file');
 }
 
 /// Return the path for `packages/codemirror/codemirror.js`.
@@ -113,8 +145,6 @@ vulcanize(String filepath) {
         '--inline-css',
         '--inline-scripts',
         '--exclude',
-        'scripts/mobile.dart.js',
-        '--exclude',
         'scripts/embed.dart.js',
         '--exclude',
         'scripts/main.dart.js',
@@ -122,8 +152,6 @@ vulcanize(String filepath) {
         'scripts/codemirror.js',
         '--exclude',
         'scripts/embed_components.html',
-        '--exclude',
-        'scripts/mobile_components.html',
         filepath
       ],
       workingDirectory: 'build/web');
@@ -176,16 +204,13 @@ void buildbot() => null;
 @Task('Prepare the app for deployment')
 @Depends(buildbot)
 deploy() {
-  // Validate the deploy. This means that we're using version `dev` on the
-  // master branch and version `prod` on the prod branch. We only deploy prod
-  // from the prod branch. Other versions are possible but not verified.
+  // Validate the deploy.
 
   // `dev` is served from dev.dart-pad.appspot.com
   // `prod` is served from prod.dart-pad.appspot.com and from dartpad.dartlang.org.
 
   Map app = yaml.loadYaml(new File('web/app.yaml').readAsStringSync());
 
-  final String version = app['version'];
   List handlers = app['handlers'];
   bool isSecure = false;
 
@@ -201,64 +226,19 @@ deploy() {
     final String branch = branchRef.branchName;
 
     log('branch: ${branch}');
-    log('version: ${version}');
 
     if (branch == 'prod') {
-      if (version != 'prod') {
-        fail('Trying to deploy non-prod version from the prod branch');
-      }
-
       if (!isSecure) {
         fail('The prod branch must have `secure: always`.');
       }
     }
 
-    if (branch == 'master') {
-      if (version != 'dev' && !version.startsWith('dev-')) {
-        fail('Trying to deploy non-dev version from the master branch');
-      }
-    }
-
-    if (version == 'prod') {
-      if (branch != 'prod') {
-        fail('The prod version can only be deployed from the prod branch');
-      }
-    }
-
-    if (version != 'prod') {
-      if (isSecure) {
-        fail('The ${version} version should not have `secure: always` set');
-      }
-    }
-
-    log('\nexecute: `appcfg.py update build/web`');
+    log('\nexecute: `gcloud app deploy build/web/app.yaml --project=dart-pad --no-promote`');
   });
 }
 
 @Task()
 clean() => defaultClean();
-
-Future _uploadCompiledStats(num mainLength, int mobileLength) {
-  Map env = Platform.environment;
-
-  if (env.containsKey('LIBRATO_USER') && env.containsKey('TRAVIS_COMMIT')) {
-    Librato librato = new Librato.fromEnvVars();
-    log('Uploading stats to ${librato.baseUrl}');
-    LibratoStat mainSize = new LibratoStat('main.dart.js', mainLength);
-    LibratoStat mobileSize =
-        new LibratoStat('mobileSize.dart.js', mobileLength);
-    return librato.postStats([mainSize, mobileSize]).then((_) {
-      String commit = env['TRAVIS_COMMIT'];
-      LibratoLink link = new LibratoLink(
-          'github', 'https://github.com/dart-lang/dart-pad/commit/${commit}');
-      LibratoAnnotation annotation = new LibratoAnnotation(commit,
-          description: 'Commit ${commit}', links: [link]);
-      return librato.createAnnotation('build_ui', annotation);
-    });
-  } else {
-    return new Future.value();
-  }
-}
 
 String _printSize(FilePath file) =>
     '${(file.asFile.lengthSync() + 1023) ~/ 1024}k';

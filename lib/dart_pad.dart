@@ -8,7 +8,6 @@ import 'package:route_hierarchical/client.dart';
 
 import 'context.dart';
 import 'core/dependencies.dart';
-import 'core/event_bus.dart';
 import 'core/keys.dart';
 import 'editing/editor.dart';
 import 'elements/state.dart';
@@ -17,7 +16,8 @@ import 'services/dartservices.dart';
 import 'services/execution.dart';
 import 'sharing/gists.dart';
 import 'src/ga.dart';
-import 'src/options.dart';
+
+const bool strongModeDefault = true;
 
 Analytics get ga => deps[Analytics];
 
@@ -30,8 +30,6 @@ P_dartpadsupportservicesApi get dartSupportServices =>
 
 EditorFactory get editorFactory => deps[EditorFactory];
 
-EventBus get eventBus => deps[EventBus];
-
 ExecutionService get executionService => deps[ExecutionService];
 
 GistLoader get gistLoader => deps[GistLoader];
@@ -41,5 +39,3 @@ Keys get keys => deps[Keys];
 Router get router => deps[Router];
 
 State get state => deps[State];
-
-Options get options => deps[Options];

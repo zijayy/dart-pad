@@ -5,15 +5,11 @@
 library dartpad.completion;
 
 import 'dart:async';
-import 'dart:convert' show JSON;
-
-import 'package:logging/logging.dart';
+import 'dart:convert' show json;
 
 import 'editing/editor.dart';
 import 'services/dartservices.dart' hide SourceEdit;
 import 'src/util.dart';
-
-Logger _logger = new Logger('completion');
 
 // TODO: For CodeMirror, we get a request each time the user hits a key when the
 // completion popup is open. We need to cache the results when appropriate.
@@ -161,7 +157,7 @@ class AnalysisCompletion implements Comparable {
 
   // Convert maps and lists that have been passed as json.
   void _convert(String key) {
-    if (_map[key] is String) _map[key] = JSON.decode(_map[key]);
+    if (_map[key] is String) _map[key] = json.decode(_map[key]);
   }
 
   // KEYWORD, INVOCATION, ...

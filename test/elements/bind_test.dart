@@ -9,7 +9,7 @@ import 'dart:async';
 import 'package:dart_pad/elements/bind.dart';
 import 'package:test/test.dart';
 
-main() => defineTests();
+void main() => defineTests();
 
 void defineTests() {
   group('bind', () {
@@ -56,7 +56,7 @@ void defineTests() {
       from.set('foo');
       binding.cancel();
       from.set('bar');
-      return new Future.delayed(Duration.ZERO, () {
+      return new Future.delayed(Duration.zero, () {
         expect(to.value, 'foo');
       });
     });

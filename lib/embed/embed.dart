@@ -69,7 +69,8 @@ class PlaygroundMobile {
   PaperToast _errorsToast;
   PaperDialog _messageDialog;
   PaperDialog _resetDialog;
-  PaperDialog _exportDialog;
+
+  // PaperDialog _exportDialog;
   PolymerElement _output;
   PaperProgress _runProgress;
 
@@ -80,39 +81,14 @@ class PlaygroundMobile {
 
   bool get _isCompletionActive => editor.completionActive;
 
-  Future createNewGist() {
-    return null;
-  }
-
-  ModuleManager modules = new ModuleManager();
-
   PlaygroundMobile() {
-    //Asyncronous processing to load UI faster in parallel
+    // Asynchronous processing to load UI faster in parallel
     Timer.run(() {
       _createUi();
     });
     Timer.run(() {
       _initModules().then((_) => _initPlayground());
     });
-  }
-
-  /**
-   * Return if strong mode should be enabled
-   */
-  bool _parseStrongModeParam(String strongModeValueString) {
-    if (strongModeValueString == null) return false;
-    return (strongModeValueString == 'true' || strongModeValueString == 't');
-  }
-
-  /**
-   * Update query parameters for strong mode
-   */
-  void showStrong() {
-    Uri url = Uri.parse(window.location.toString());
-    String strong = url.queryParameters['strong'];
-    if (_parseStrongModeParam(strong)) {
-      (querySelector('#strongmode') as InputElement).checked = true;
-    }
   }
 
   void showHome(RouteEnterEvent event) {
@@ -136,8 +112,8 @@ class PlaygroundMobile {
     _setGistId(null);
 
     context.dartSource = sample.dartCode;
-    context.htmlSource = sample.htmlCode;
-    context.cssSource = sample.cssCode;
+    context.htmlSource = '\n';
+    context.cssSource = '\n';
     _storePreviousResult();
   }
 
@@ -154,13 +130,6 @@ class PlaygroundMobile {
 
     _showGist(gistId, run: page == 'run');
     _storePreviousResult();
-  }
-
-  void registerStrongMode() {
-    showStrong();
-    querySelector('#strongmode').onChange.listen((e) {
-      _performAnalysis();
-    });
   }
 
   void registerMessageToast() {
@@ -201,11 +170,11 @@ class PlaygroundMobile {
   }
 
   void registerExportDialog() {
-    if ($("#exportDialog") != null) {
+    /* if ($("#exportDialog") != null) {
       _exportDialog = new PaperDialog.from($("#exportDialog"));
     } else {
       _exportDialog = new PaperDialog();
-    }
+    } */
   }
 
   void registerDocPanel() {
@@ -249,8 +218,10 @@ class PlaygroundMobile {
     if ($('[icon="launch"]') != null) {
       _exportButton = new PaperIconButton.from($('[icon="launch"]'));
       _exportButton.clickAction(() {
-        _exportDialog.open();
+        // Sharing is currently disabled pending establishing OAuth2 configurations with Github.
+        //_exportDialog.open();
         ga.sendEvent("embed", "export");
+        window.open("/${_gistId}", "_export");
       });
     }
   }
@@ -324,7 +295,6 @@ class PlaygroundMobile {
     registerCancelExportButton();
     registerAffirmExportButton();
     registerConsole();
-    registerStrongMode();
     _clearOutput();
   }
 
@@ -382,9 +352,9 @@ class PlaygroundMobile {
   }
 
   Future _initModules() {
+    ModuleManager modules = new ModuleManager();
+
     modules.register(new DartPadModule());
-    //modules.register(new MockAnalysisModule());
-    //modules.register(new MockCompilerModule());
     modules.register(new DartServicesModule());
     modules.register(new DartSupportServicesModule());
     modules.register(new CodeMirrorModule());
@@ -535,7 +505,7 @@ class PlaygroundMobile {
     _finishedInit();
   }
 
-  _finishedInit() {
+  void _finishedInit() {
     Timer.run(() {
       editor.resize();
     });
@@ -546,33 +516,24 @@ class PlaygroundMobile {
       ..listen();
   }
 
-  _handleAutoCompletion(KeyboardEvent e) {
+  final RegExp cssSymbolRegexp = new RegExp(r"[A-Z]");
+
+  void _handleAutoCompletion(KeyboardEvent e) {
     if (context.focusedEditor == 'dart' && editor.hasFocus) {
       if (e.keyCode == KeyCode.PERIOD) {
         editor.showCompletions(autoInvoked: true);
       }
     }
 
-    if (!options.getValueBool('autopopup_code_completion') ||
-        _isCompletionActive ||
-        !editor.hasFocus) {
-      return;
-    }
-
-    if (context.focusedEditor == 'dart') {
-      RegExp exp = new RegExp(r"[A-Z]");
-      if (exp.hasMatch(new String.fromCharCode(e.keyCode))) {
-        editor.showCompletions(autoInvoked: true);
-      }
-    } else if (context.focusedEditor == "html") {
-      // TODO: Autocompletion for attributes.
-      if (printKeyEvent(e) == "shift-,") {
-        editor.showCompletions(autoInvoked: true);
-      }
-    } else if (context.focusedEditor == "css") {
-      RegExp exp = new RegExp(r"[A-Z]");
-      if (exp.hasMatch(new String.fromCharCode(e.keyCode))) {
-        editor.showCompletions(autoInvoked: true);
+    if (!_isCompletionActive && editor.hasFocus) {
+      if (context.focusedEditor == "html") {
+        if (printKeyEvent(e) == "shift-,") {
+          editor.showCompletions(autoInvoked: true);
+        }
+      } else if (context.focusedEditor == "css") {
+        if (cssSymbolRegexp.hasMatch(new String.fromCharCode(e.keyCode))) {
+          editor.showCompletions(autoInvoked: true);
+        }
       }
     }
   }
@@ -652,10 +613,9 @@ class PlaygroundMobile {
   }
 
   void _performAnalysis() {
-    bool strongMode = (querySelector('#strongmode') as InputElement).checked;
     var input = new SourceRequest()
       ..source = _context.dartSource
-      ..strongMode = strongMode;
+      ..strongMode = strongModeDefault;
 
     Lines lines = new Lines(input.source);
 
@@ -868,16 +828,19 @@ class PlaygroundContext extends Context {
   Document get dartDocument => _dartDoc;
 
   String get dartSource => _dartDoc.value;
+
   set dartSource(String value) {
     _dartDoc.value = value;
   }
 
   String get htmlSource => _htmlDoc.value;
+
   set htmlSource(String value) {
     _htmlDoc.value = value;
   }
 
   String get cssSource => _cssDoc.value;
+
   set cssSource(String value) {
     _cssDoc.value = value;
   }
@@ -910,15 +873,21 @@ class PlaygroundContext extends Context {
   }
 
   Stream get onCssDirty => _cssDirtyController.stream;
+
   Stream get onDartDirty => _dartDirtyController.stream;
+
   Stream get onHtmlDirty => _htmlDirtyController.stream;
 
   Stream get onCssReconcile => _cssReconcileController.stream;
+
   Stream get onDartReconcile => _dartReconcileController.stream;
+
   Stream get onHtmlReconcile => _htmlReconcileController.stream;
 
   void markCssClean() => _cssDoc.markClean();
+
   void markDartClean() => _dartDoc.markClean();
+
   void markHtmlClean() => _htmlDoc.markClean();
 
   /**
@@ -944,40 +913,4 @@ class PlaygroundContext extends Context {
     String char = str[index];
     return char != char.trim();
   }
-}
-
-/**
- * A simple element that can display a lightbulb, with fade in and out and a
- * built in counter.
- */
-class BusyLight {
-  static final Duration _delay = const Duration(milliseconds: 150);
-
-  final Element element;
-  int _count = 0;
-
-  BusyLight(this.element);
-
-  void on() {
-    _count++;
-    _reconcile();
-  }
-
-  void off() {
-    _count--;
-    if (_count < 0) _count = 0;
-    _reconcile();
-  }
-
-  void flash() {
-    on();
-    new Future.delayed(_delay, off);
-  }
-
-  void reset() {
-    _count = 0;
-    _reconcile();
-  }
-
-  _reconcile() => element.classes.toggle('busy', _count > 0);
 }
