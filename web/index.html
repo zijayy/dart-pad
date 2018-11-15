@@ -55,6 +55,8 @@
           <option disabled></option>
           <!--- Gists at https://gist.github.com/[value] -->
           <option value="215ba63265350c02dfbd586dfd30b8c3">Hello World</option>
+          <option value="e93b969fed77325db0b848a85f1cf78e">Int to Double</option>
+          <option value="b60dc2fc7ea49acecb1fd2b57bf9be57">Mixins</option>
           <option value="7d78af42d7b0aedfd92f00899f93561b">Fibonacci</option>
           <option value="a559420eed617dab7a196b5ea0b64fba">Sunflower</option>
           <option value="cb9b199b1085873de191e32a1dd5ca4f">WebSockets</option>
@@ -68,8 +70,8 @@
       <div class="view" flex three layout vertical>
         <div class="header" layout horizontal wrap>
           <li><a id="darttab" selected class="arrow_box"><span>Dart</span></a></li>
-          <li><a id="htmltab"><span>HTML</span></a></li>
-          <li><a id="csstab"><span>CSS</span></a></li>
+          <li><a id="htmltab" style="visibility: hidden;"><span>HTML</span></a></li>
+          <li><a id="csstab" style="visibility: hidden;"><span>CSS</span></a></li>
           <div flex></div>
           <div id="dartbusy" class="busylight"></div>
           <div>
@@ -96,7 +98,7 @@
           <div id="frame-overlay"></div>
           <div class="header" layout horizontal wrap>
             <div flex></div>
-            <li><a id="resulttab"><span>HTML Output</span></a></li>
+            <li><a id="resulttab" style="visibility: hidden;"><span>HTML Output</span></a></li>
             <li><a id="consoletab" selected last><span>Console</span></a></li>
             <div id="consolebusy" class="busylight"></div>
           </div>
@@ -125,6 +127,10 @@
             target="repo">Send feedback</a>
       </div>
       <div flex></div>
+
+      <input type="checkbox" id="show-web-content" class="footer-items">
+      <label for="show-web-content" class="footer-item">Show web content</label>
+
       <div id="dartpad_version"> </div>
     </footer>
   </body>
