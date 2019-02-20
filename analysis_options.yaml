@@ -3,8 +3,10 @@ analyzer:
   exclude:
     - 'build/**'
     - 'doc/api/**'
-    - 'lib/bower/**'
     - 'last_prod/**'
+    - 'lib/bower/**'
+    - 'lib/services/_dartpadsupportservices.dart'
+    - 'lib/services/dartservices.dart'
     - 'third_party/pkg/**'
 
 linter:
@@ -26,7 +28,6 @@ linter:
   #- comment_references
   #- constant_identifier_names
   - control_flow_in_finally
-  - directives_ordering
   - directives_ordering
   - empty_catches
   - empty_constructor_bodies
