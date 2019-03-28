@@ -14,6 +14,7 @@ class DElement {
   final Element element;
 
   DElement(this.element);
+
   DElement.tag(String tag, {String classes}) : element = Element.tag(tag) {
     if (classes != null) {
       element.classes.add(classes);
@@ -32,6 +33,12 @@ class DElement {
       element.setAttribute(name, value);
 
   String clearAttr(String name) => element.attributes.remove(name);
+
+  void toggleClass(String name, bool value) {
+    value ? element.classes.add(name) : element.classes.remove(name);
+  }
+
+  bool hasClass(String name) => element.classes.contains(name);
 
   String get text => element.text;
 
@@ -63,6 +70,10 @@ class DElement {
     return child;
   }
 
+  void clearChildren() {
+    element.children.clear();
+  }
+
   Stream<Event> get onClick => element.onClick;
 
   void dispose() {
@@ -77,6 +88,7 @@ class DElement {
     }
   }
 
+  @override
   String toString() => element.toString();
 }
 
@@ -91,11 +103,12 @@ class DButton extends DElement {
     }
   }
 
-  DButton.close() : super.tag('button', classes: "close");
+  DButton.close() : super.tag('button', classes: 'close');
 
   ButtonElement get belement => element;
 
   bool get disabled => belement.disabled;
+
   set disabled(bool value) {
     belement.disabled = value;
   }
@@ -130,12 +143,14 @@ class DSplitter extends DElement {
   }
 
   bool get horizontal => hasAttr('horizontal');
+
   set horizontal(bool value) {
     clearAttr(value ? 'vertical' : 'horizontal');
     setAttr(value ? 'horizontal' : 'vertical');
   }
 
   bool get vertical => hasAttr('vertical');
+
   set vertical(bool value) {
     clearAttr(value ? 'horizontal' : 'vertical');
     setAttr(value ? 'vertical' : 'horizontal');
@@ -343,6 +358,7 @@ class DOverlay extends DElement {
   DOverlay(Element element) : super(element);
 
   bool get visible => element.classes.contains('visible');
+
   set visible(bool value) {
     element.classes.toggle('visible', value);
   }
@@ -513,13 +529,16 @@ class _ElementTextProperty implements Property {
 
   _ElementTextProperty(this.element);
 
+  @override
   String get() => element.text;
 
+  @override
   void set(value) {
     element.text = value == null ? '' : value.toString();
   }
 
   // TODO:
+  @override
   Stream get onChanged => null;
 }
 
@@ -534,12 +553,12 @@ class TabController {
     try {
       tab.onClick.listen((_) => selectTab(tab.name));
     } catch (e, st) {
-      print('Error from registerTab: ${e}\n${st}');
+      print('Error from registerTab: $e\n$st');
     }
   }
 
   TabElement get selectedTab =>
-      tabs.firstWhere((tab) => tab.hasAttr("selected"));
+      tabs.firstWhere((tab) => tab.hasAttr('selected'));
 
   /// This method will throw if the tabName is not the name of a current tab.
   void selectTab(String tabName) {
@@ -567,5 +586,6 @@ class TabElement extends DElement {
     if (onSelect != null) onSelect();
   }
 
+  @override
   String toString() => name;
 }

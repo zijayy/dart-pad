@@ -6,6 +6,7 @@ library dart_pad.util;
 
 import 'dart:async';
 import 'dart:html';
+import 'package:meta/meta.dart';
 
 /// Return whether we are running on a mobile device.
 bool isMobile() {
@@ -19,8 +20,10 @@ bool isMobile() {
 
 /// A [NodeValidator] which allows everything.
 class PermissiveNodeValidator implements NodeValidator {
+  @override
   bool allowsElement(Element element) => true;
 
+  @override
   bool allowsAttribute(Element element, String attributeName, String value) {
     return true;
   }
@@ -48,9 +51,10 @@ class CancellationException implements Exception {
 
   CancellationException(this.reason);
 
+  @override
   String toString() {
-    String result = "Request cancelled";
-    if (reason != null) result = "$result due to: $reason";
+    String result = 'Request cancelled';
+    if (reason != null) result = '$result due to: $reason';
     return result;
   }
 }
@@ -61,19 +65,23 @@ class CancellableCompleter<T> implements Completer {
 
   CancellableCompleter();
 
+  @override
   void complete([value]) {
     if (!_cancelled) _completer.complete(value);
   }
 
+  @override
   void completeError(Object error, [StackTrace stackTrace]) {
     if (!_cancelled) _completer.completeError(error, stackTrace);
   }
 
+  @override
   Future<T> get future => _completer.future;
 
+  @override
   bool get isCompleted => _completer.isCompleted;
 
-  void cancel({String reason = "cancelled"}) {
+  void cancel({String reason = 'cancelled'}) {
     if (!_cancelled) {
       if (!isCompleted) completeError(CancellationException(reason));
       _cancelled = true;
@@ -108,4 +116,49 @@ Stream<T> debounceStream<T>(Stream<T> stream, Duration duration) {
   });
 
   return controller.stream;
+}
+
+/// A typedef to represent a function taking no arguments and with no return
+/// value.
+typedef VoidFunction = void Function();
+
+/// Batch up calls to the given closure. Repeated calls to [invoke] will
+/// overwrite the closure to be called. We'll delay at least [minDelay] before
+/// calling the closure, but will not delay more than [maxDelay].
+class DelayedTimer {
+  DelayedTimer({
+    @required this.minDelay,
+    @required this.maxDelay,
+  });
+
+  final Duration minDelay;
+  final Duration maxDelay;
+
+  VoidFunction _closure;
+
+  Timer _minTimer;
+  Timer _maxTimer;
+
+  void invoke(VoidFunction closure) {
+    _closure = closure;
+
+    if (_minTimer == null) {
+      _minTimer = Timer(minDelay, _fire);
+      _maxTimer = Timer(maxDelay, _fire);
+    } else {
+      _minTimer.cancel();
+      _minTimer = Timer(minDelay, _fire);
+    }
+  }
+
+  void _fire() {
+    _minTimer?.cancel();
+    _minTimer = null;
+
+    _maxTimer?.cancel();
+    _maxTimer = null;
+
+    _closure();
+    _closure = null;
+  }
 }

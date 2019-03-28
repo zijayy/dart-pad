@@ -16,6 +16,7 @@ final FilePath _buildDir = FilePath('build');
 final FilePath _pkgDir = FilePath('third_party/pkg');
 final FilePath _routeDir = FilePath('third_party/pkg/route.dart');
 final FilePath _haikunatorDir = FilePath('third_party/pkg/haikunatordart');
+final FilePath _experimentalTestDir = FilePath('test/experimental');
 
 Map get _env => Platform.environment;
 
@@ -65,6 +66,15 @@ testWeb() async {
       workingDirectory: _routeDir.path);
 }
 
+// This task also requires a frame buffer to run.
+@Task()
+testExperimental() async {
+  await TestRunner().testAsync(
+    files: _experimentalTestDir.path,
+    platformSelector: 'chrome',
+  );
+}
+
 @Task('Serve locally on port 8000')
 @Depends(build)
 serve() {
@@ -72,20 +82,38 @@ serve() {
 }
 
 const String backendVariable = 'DARTPAD_BACKEND';
+
 @Task(
-    'Serve locally on port 8000 and use backend from ${backendVariable} environment variable')
+    'Serve locally on port 8002 and use backend from $backendVariable environment variable')
 @Depends(build)
 serveCustomBackend() {
   if (!Platform.environment.containsKey(backendVariable)) {
-    throw GrinderException(
-        '${backendVariable} must be specified as [http|https]://host[:port]');
+    print('$backendVariable can be specified (as [http|https]://host[:port]) '
+        'to indicate the dart-services server to connect to');
   }
-  run('sed', arguments: [
-    '-i',
-    's,https://dart-services.appspot.com,${Platform.environment[backendVariable]},g',
-    'build/scripts/main.dart.js',
-    'build/scripts/embed.dart.js',
-  ]);
+
+  final String serverUrl =
+      Platform.environment[backendVariable] ?? 'http://localhost:8002';
+
+  // In all files *.dart.js in build/scripts/, replace
+  // 'https://dart-services.appspot.com' with serverUrl.
+  for (FileSystemEntity entity
+      in _buildDir.join('scripts').asDirectory.listSync()) {
+    if (entity is! File) continue;
+    if (!entity.path.endsWith('.dart.js')) continue;
+
+    final File file = entity;
+
+    log('Rewriting server url to $serverUrl for ${file.path}');
+
+    String fileContents = file.readAsStringSync();
+    fileContents =
+        fileContents.replaceAll('https://dart-services.appspot.com', serverUrl);
+    file.writeAsStringSync(fileContents);
+  }
+
+  log('\nServing dart-pad on http://localhost:8000');
+
   run('pub', arguments: ['run', 'dhttpd', '-p', '8000', '--path=build']);
 }
 
@@ -94,17 +122,17 @@ build() {
   PubApp.local('build_runner').run(['build', '-r', '-o', 'web:build']);
 
   FilePath mainFile = _buildDir.join('scripts/main.dart.js');
-  log('${mainFile} compiled to ${_printSize(mainFile)}');
+  log('$mainFile compiled to ${_printSize(mainFile)}');
 
   FilePath testFile = _buildDir.join('test', 'web.dart.js');
   if (testFile.exists)
     log('${testFile.path} compiled to ${_printSize(testFile)}');
 
   FilePath embedFile = _buildDir.join('scripts/embed.dart.js');
-  log('${embedFile} compiled to ${_printSize(embedFile)}');
+  log('$embedFile compiled to ${_printSize(embedFile)}');
 
   FilePath newEmbedFile = _buildDir.join('experimental/new_embed.dart.js');
-  log('${newEmbedFile} compiled to ${_printSize(newEmbedFile)}');
+  log('$newEmbedFile compiled to ${_printSize(newEmbedFile)}');
 
   // Remove .dart files.
   int count = 0;
@@ -222,7 +250,7 @@ coverage() {
 }
 
 @DefaultTask()
-@Depends(analyze, testCli, testWeb, coverage, build)
+@Depends(analyze, testCli, testWeb, testExperimental, coverage, build)
 void buildbot() => null;
 
 @Task('Prepare the app for deployment')
@@ -249,7 +277,7 @@ deploy() {
   }).then((BranchReference branchRef) {
     final String branch = branchRef.branchName;
 
-    log('branch: ${branch}');
+    log('branch: $branch');
 
     if (branch == 'prod') {
       if (!isSecure) {

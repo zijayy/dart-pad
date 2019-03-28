@@ -1,0 +1,47 @@
+/* Copyright (c) 2019, the Dart project authors.  Please see the AUTHORS file */
+/* for details. All rights reserved. Use of this source code is governed by a */
+/* BSD-style license that can be found in the LICENSE file. */
+
+body {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  position: absolute;
+
+  overflow: hidden;
+}
+
+#frame {
+  display: none;
+}
+
+textarea {
+  border: none;
+  resize: none;
+  font-family: 'Inconsolata', monospace;
+  font-size: 12pt;
+}
+
+.medium-octicon {
+  font-size: 19px;
+}
+
+/* Code annotations */
+.squiggle-error {
+  border-bottom: 2px solid #F7977A;
+}
+
+.squiggle-warning {
+  border-bottom: 2px solid #FFF79A;
+}
+
+.squiggle-info {
+  border-bottom: 2px solid #7EA7D8;
+}
+
+/* Styling specifically for CodeMirror editor */
+.CodeMirror {
+  height: 100%;
+}
