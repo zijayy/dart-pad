@@ -40,17 +40,19 @@ BSD-style license that can be found in the LICENSE file. -->
 
 <body class="d-flex flex-column">
 
-<nav class="UnderlineNav p-2">
+<nav id="navbar" class="UnderlineNav p-2">
     <div class="UnderlineNav-body">
         <div class="BtnGroup mr-2">
             <button id="editor-tab" class="btn BtnGroup-item selected" selected type="button">Your code</button>
             <button id="test-tab" class="btn BtnGroup-item" type="button">Test</button>
-            <button id="console-tab" class="btn BtnGroup-item" type="button">Console</button>
+            <button id="console-tab" class="btn BtnGroup-item" type="button">
+                Console
+                <span id="unread-console-counter" class="Counter" hidden></span>
+            </button>
         </div>
     </div>
     <div class="UnderlineNav-actions">
         <button id="reload-gist" class="btn">
-            <div class="octicon medium-octicon octicon-cloud-download"></div>
             Reset code
         </button>
         <button id="execute" class="btn btn-primary">
@@ -72,11 +74,15 @@ BSD-style license that can be found in the LICENSE file. -->
 
 <div id="flash-container" class="position-fixed right-2 bottom-2 col-6">
     <div id="analysis-result-box" class="flash flash-error" hidden>
-        <button class="flash-close">close</button>
+        <button class="flash-close">
+            <div class="octicon octicon-x"></div>
+        </button>
         <div class="message-container"></div>
     </div>
     <div id="test-result-box" class="flash flash-warn" hidden>
-        <button class="flash-close">close</button>
+        <button class="flash-close">
+            <div class="octicon octicon-x"></div>
+        </button>
         <div class="message-container"></div>
     </div>
 </div>
@@ -87,4 +93,3 @@ BSD-style license that can be found in the LICENSE file. -->
 </body>
 
 </html>
-

@@ -9,6 +9,7 @@ import 'package:dart_pad/sharing/gists.dart';
 
 import '../core/dependencies.dart';
 import '../core/modules.dart';
+import '../dart_pad.dart';
 import '../editing/editor.dart';
 import '../editing/editor_codemirror.dart';
 import '../elements/elements.dart';
@@ -30,13 +31,16 @@ void init() {
 /// An embeddable DartPad UI that provides the ability to test the user's code
 /// snippet against a desired result.
 class NewEmbed {
-  ExecuteCodeButton executeButton;
-  ButtonElement reloadGistButton;
+  DisableableButton executeButton;
+  DisableableButton reloadGistButton;
 
+  DElement navBarElement;
   TabController tabController;
   TabView editorTabView;
   TabView testTabView;
   ConsoleTabView consoleTabView;
+
+  Counter unreadConsoleCounter;
 
   FlashBox testResultBox;
   FlashBox analysisResultBox;
@@ -67,25 +71,31 @@ class NewEmbed {
           if (name == 'editor') {
             userCodeEditor.resize();
             userCodeEditor.focus();
-          }
-
-          if (name == 'test') {
+          } else if (name == 'test') {
             testEditor.resize();
             testEditor.focus();
+          } else {
+            // Must be the console tab.
+            unreadConsoleCounter.clear();
           }
         }),
       );
     }
 
-    executeButton =
-        ExecuteCodeButton(querySelector('#execute'), _handleExecute);
+    navBarElement = DElement(querySelector('#navbar'));
 
-    reloadGistButton = querySelector('#reload-gist');
-    if (gistId.isNotEmpty) {
-      reloadGistButton.onClick.listen((e) => _loadAndShowGist(gistId));
-    } else {
-      reloadGistButton.setAttribute('disabled', 'true');
-    }
+    unreadConsoleCounter = Counter(querySelector('#unread-console-counter'));
+
+    executeButton =
+        DisableableButton(querySelector('#execute'), _handleExecute);
+
+    reloadGistButton = DisableableButton(querySelector('#reload-gist'), () {
+      if (gistId.isNotEmpty) {
+        _loadAndShowGist(gistId);
+      }
+    });
+
+    reloadGistButton.disabled = gistId.isEmpty;
 
     testResultBox = FlashBox(querySelector('#test-result-box'));
     analysisResultBox = FlashBox(querySelector('#analysis-result-box'));
@@ -110,13 +120,22 @@ class NewEmbed {
     consoleTabView = ConsoleTabView(DElement(querySelector('#console-view')));
 
     executionSvc = ExecutionServiceIFrame(querySelector('#frame'));
-    executionSvc.onStderr.listen((err) => consoleTabView.appendError(err));
-    executionSvc.onStdout.listen((msg) => consoleTabView.appendMessage(msg));
-    executionSvc.testResults.listen((result) {
-      if (result.success) {
-        executeButton.executionState = ExecutionState.testSuccess;
-      }
 
+    executionSvc.onStderr.listen((err) {
+      if (tabController.selectedTab.name != 'console') {
+        unreadConsoleCounter.increment();
+      }
+      consoleTabView.appendError(err);
+    });
+
+    executionSvc.onStdout.listen((msg) {
+      if (tabController.selectedTab.name != 'console') {
+        unreadConsoleCounter.increment();
+      }
+      consoleTabView.appendMessage(msg);
+    });
+
+    executionSvc.testResults.listen((result) {
       testResultBox.showStrings(
         result.messages.isNotEmpty ? result.messages : ['Test passed!'],
         result.success ? FlashBoxStyle.success : FlashBoxStyle.warn,
@@ -152,75 +171,113 @@ class NewEmbed {
 
     context = NewEmbedContext(userCodeEditor, testEditor);
 
+    if (supportsFlutterWeb) {
+      // Make the web output area visible.
+      querySelector('#web-output').removeAttribute('hidden');
+    }
+
     if (gistId.isNotEmpty) {
       _loadAndShowGist(gistId);
     }
   }
 
+  /// Toggles the state of several UI components based on whether the editor is
+  /// too busy to handle code changes, execute/reset requests, etc.
+  set editorIsBusy(bool value) {
+    navBarElement.toggleClass('busy', value);
+    executeButton.disabled = value;
+    userCodeEditor.readOnly = value;
+    testEditor.readOnly = value;
+    reloadGistButton.disabled = value || gistId.isEmpty;
+  }
+
   Future<void> _loadAndShowGist(String id) async {
+    editorIsBusy = true;
     final GistLoader loader = deps[GistLoader];
     final gist = await loader.loadGist(id);
     context.dartSource = gist.getFile('main.dart')?.content ?? '';
     context.testMethod = gist.getFile('test.dart')?.content ?? '';
+    editorIsBusy = false;
   }
 
   void _handleExecute() {
-    executeButton.executionState = ExecutionState.executing;
+    editorIsBusy = true;
     testResultBox.hide();
     consoleTabView.clear();
 
-    final fullCode =
-        '${context.dartSource}\n${context.testMethod}\n${executionSvc.testResultDecoration}';
+    final fullCode = '${context.dartSource}\n${context.testMethod}\n'
+        '${executionSvc.testResultDecoration}';
 
     var input = CompileRequest()..source = fullCode;
 
-    deps[DartservicesApi]
-        .compile(input)
-        .timeout(longServiceCallTimeout)
-        .then((CompileResponse response) {
-          executionSvc.execute('', '', response.result);
-        })
-        .catchError((e) {
-          consoleTabView.appendError('Error compiling to JavaScript:\n$e');
-          tabController.selectTab('console');
-        })
-        .whenComplete(() {
-          executeButton.executionState = ExecutionState.ready;
-        });
+    if (supportsFlutterWeb) {
+      dartServices
+          .compileDDC(input)
+          .timeout(longServiceCallTimeout)
+          .then((CompileDDCResponse response) {
+        executionSvc.execute(
+          '',
+          '',
+          response.result,
+          modulesBaseUrl: response.modulesBaseUrl,
+        );
+      }).catchError((e, st) {
+        consoleTabView.appendError('Error compiling to JavaScript:\n$e');
+        print(st);
+        tabController.selectTab('console');
+      }).whenComplete(() {
+        editorIsBusy = false;
+      });
+    } else {
+      dartServices
+          .compile(input)
+          .timeout(longServiceCallTimeout)
+          .then((CompileResponse response) {
+        executionSvc.execute('', '', response.result);
+      }).catchError((e, st) {
+        consoleTabView.appendError('Error compiling to JavaScript:\n$e');
+        print(st);
+        tabController.selectTab('console');
+      }).whenComplete(() {
+        editorIsBusy = false;
+      });
+    }
   }
 
   void _displayIssues(List<AnalysisIssue> issues) {
-    final elements = <DivElement>[];
+    int errorCount = 0;
+    int otherCount = 0;
 
     for (AnalysisIssue issue in issues) {
-      elements.add(
-        DivElement()
-          ..children.add(
-            AnchorElement()
-              ..text = '${issue.kind.toUpperCase()} - ${issue.message}'
-              ..classes = ['link-message', 'text-red']
-              ..onClick.listen((event) {
-                _jumpTo(issue.line, issue.charStart, issue.charLength,
-                    focus: true);
-              }),
-          ),
-      );
+      if (issue.kind == 'error') {
+        errorCount++;
+      } else if (issue.kind == 'info' || issue.kind == 'warning') {
+        otherCount++;
+      }
     }
 
-    if (elements.isNotEmpty) {
-      analysisResultBox.showElements(elements, FlashBoxStyle.error);
-    } else {
+    if (errorCount == 0 && otherCount == 0) {
       analysisResultBox.hide();
+    } else {
+      String message;
+      FlashBoxStyle style;
+
+      if (errorCount > 0 && otherCount > 0) {
+        message = 'Analyzer found $errorCount error${errorCount > 1 ? 's' : ''}'
+            ' and $otherCount other issue${otherCount > 1 ? 's' : ''}.';
+        style = FlashBoxStyle.error;
+      } else if (errorCount > 0) {
+        message =
+            'Analyzer found $errorCount error${errorCount > 1 ? 's' : ''}.';
+        style = FlashBoxStyle.error;
+      } else {
+        message =
+            'Analyzer found $otherCount issue${otherCount > 1 ? 's' : ''}';
+        style = FlashBoxStyle.warn;
+      }
+
+      analysisResultBox.showStrings([message], style);
     }
-  }
-
-  void _jumpTo(int line, int charStart, int charLength, {bool focus = false}) {
-    Document doc = userCodeEditor.document;
-
-    doc.select(
-        doc.posFromIndex(charStart), doc.posFromIndex(charStart + charLength));
-
-    if (focus) userCodeEditor.focus();
   }
 
   /// Perform static analysis of the source code.
@@ -261,6 +318,11 @@ class NewEmbed {
         }).toList());
       });
     });
+  }
+
+  bool get supportsFlutterWeb {
+    Uri url = Uri.parse(window.location.toString());
+    return url.queryParameters['fw'] == 'true';
   }
 }
 
@@ -316,65 +378,39 @@ class ConsoleTabView extends TabView {
   }
 }
 
-/// A line of text next to the [ExecuteButton] that reports test result messages
-/// in red or green.
-class TestResultLabel {
-  TestResultLabel(this.element);
+class Counter {
+  Counter(this.element);
 
-  final DivElement element;
+  final SpanElement element;
 
-  void setResult(TestResult result) {
-    if (result.messages.isEmpty) {
-      element.text = result.success ? 'Test passed!' : 'Test failed.';
-    } else {
-      element.text = result.messages.first;
-    }
+  int _itemCount = 0;
 
-    if (result.success) {
-      element.classes.add('text-green');
-      element.classes.remove('text-red');
-    } else {
-      element.classes.remove('text-green');
-      element.classes.add('text-red');
-    }
+  void increment() {
+    _itemCount++;
+    element.text = '$_itemCount';
+    element.attributes.remove('hidden');
+  }
+
+  void clear() {
+    _itemCount = 0;
+    element.setAttribute('hidden', 'true');
   }
 }
 
-enum ExecutionState {
-  ready,
-  executing,
-  testSuccess,
-}
-
-class ExecuteCodeButton {
-  /// This constructor will throw if the provided element has no child with a
-  /// CSS class that begins with "octicon-".
-  ExecuteCodeButton(ButtonElement anchorElement, VoidCallback onClick)
+/// It's a real word, I swear.
+class DisableableButton {
+  DisableableButton(ButtonElement anchorElement, VoidCallback onClick)
       : assert(anchorElement != null),
         assert(onClick != null) {
-    final iconElement =
-        anchorElement.children.firstWhere(Octicon.elementIsOcticon);
-    _icon = Octicon(iconElement);
     _element = DElement(anchorElement);
     _element.onClick.listen((e) => onClick());
   }
-
-  static const iconNames = <ExecutionState, String>{
-    ExecutionState.ready: 'triangle-right',
-    ExecutionState.executing: 'sync',
-    ExecutionState.testSuccess: 'check',
-  };
 
   static const disabledClassName = 'disabled';
 
   DElement _element;
 
-  Octicon _icon;
-
-  set executionState(ExecutionState state) {
-    _element.toggleClass(disabledClassName, state == ExecutionState.executing);
-    _icon.iconName = iconNames[state];
-  }
+  set disabled(bool value) => _element.toggleClass(disabledClassName, value);
 }
 
 class Octicon {
