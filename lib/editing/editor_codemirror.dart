@@ -45,8 +45,8 @@ class CodeMirrorFactory extends EditorFactory {
       'lineWrapping': true,
       'indentUnit': 2,
       'cursorHeight': 0.85,
-      // Increase the number of lines that are rendered above and before
-      // what's visible.
+      // Increase the number of lines that are rendered above and before what's
+      // visible.
       'viewportMargin': 100,
       //'gutters': [_gutterId],
       'extraKeys': {'Cmd-/': 'toggleComment', 'Ctrl-/': 'toggleComment'},
@@ -204,6 +204,12 @@ class _CodeMirrorEditor extends Editor {
   }
 
   @override
+  bool get autoCloseBrackets => cm.getOption('autoCloseBrackets');
+
+  @override
+  set autoCloseBrackets(bool value) => cm.setOption('autoCloseBrackets', value);
+
+  @override
   String get mode => cm.getMode();
 
   @override
@@ -242,7 +248,7 @@ class _CodeMirrorEditor extends Editor {
   bool get readOnly => cm.getReadOnly();
 
   @override
-  set readOnly(bool ro) => cm.setReadOnly(ro);
+  set readOnly(bool ro) => cm.setReadOnly(ro, true);
 
   @override
   bool get showLineNumbers => cm.getLineNumbers();

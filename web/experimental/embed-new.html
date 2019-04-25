@@ -28,6 +28,7 @@ BSD-style license that can be found in the LICENSE file. -->
     <link href="../packages/codemirror/addon/hint/show-hint.css" rel="stylesheet" media="screen">
     <link href="../packages/codemirror/theme/elegant.css" rel="stylesheet" media="screen">
     <script src="../packages/codemirror/codemirror.js" defer></script>
+    <script src="../packages/split/split.min.js" defer></script>
 
     <link rel="stylesheet" type="text/css" href="new_embed.css">
     <script defer src="new_embed.dart.js"></script>
@@ -35,55 +36,61 @@ BSD-style license that can be found in the LICENSE file. -->
 </head>
 
 <body class="d-flex flex-column">
-
-<nav id="navbar" class="UnderlineNav p-2">
-    <div class="UnderlineNav-body">
-        <div class="BtnGroup mr-2">
-            <button id="editor-tab" class="btn BtnGroup-item selected" selected type="button">Your code</button>
-            <button id="test-tab" class="btn BtnGroup-item" type="button">Test</button>
-            <button id="console-tab" class="btn BtnGroup-item" type="button">
-                Console
-                <span id="unread-console-counter" class="Counter" hidden></span>
-            </button>
-        </div>
-    </div>
-    <div class="UnderlineNav-actions">
-        <button id="reload-gist" class="btn">
-            Reset code
+<div id="navbar" class="tabnav dp-tabs">
+    <nav class="tabnav-tabs">
+        <button id="editor-tab" class="tabnav-tab selected" selected>Your code</button>
+        <button id="solution-tab" class="tabnav-tab" hidden>Solution</button>
+        <button id="test-tab" class="tabnav-tab">Test code</button>
+        <button id="console-tab" class="tabnav-tab">
+            Output
+            <span id="unread-console-counter" class="Counter" hidden></span>
         </button>
-        <button id="execute" class="btn btn-primary">
+    </nav>
+    <div class="nav-buttons">
+        <button id="show-hint" class="btn mr-1">Hint</button>
+        <button id="format-code" class="btn mr-2">Format</button>
+        <button id="reload-gist" class="btn mr-2">Reset</button>
+        <button id="execute" class="btn btn-primary float-right">
             <div class="octicon medium-octicon octicon-triangle-right"></div>
-            Check code
+            Run
         </button>
     </div>
-</nav>
-
+</div>
 <section id="tab-container" class="flex-auto d-flex flex-column no-overflow">
     <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
-        <div id="user-code-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
-        <div id="web-output" class="p-1 d-flex" hidden>
+        <div id="user-code-editor" spellcheck="false"></div>
+        <div id="web-output" hidden>
             <iframe id="frame" sandbox="allow-scripts" class="flex-auto" src="../scripts/frame.html">
             </iframe>
         </div>
     </div>
-    <div id="test-view" class="flex-auto d-flex flex-column" spellcheck="false" hidden>
+    <div id="solution-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
+        <div id="solution-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
+    </div>
+    <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
         <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
     </div>
     <div id="console-view" class="tabview flex-auto p-2" hidden></div>
 </section>
 
-<div id="flash-container" class="position-fixed right-2 bottom-2 col-6">
+<div id="flash-container" class="position-fixed right-2 bottom-2">
     <div id="analysis-result-box" class="flash flash-error" hidden>
         <button class="flash-close">
             <div class="octicon octicon-x"></div>
         </button>
-        <div class="message-container"></div>
+        <div class="message-container custom-scrollbar"></div>
     </div>
     <div id="test-result-box" class="flash flash-warn" hidden>
         <button class="flash-close">
             <div class="octicon octicon-x"></div>
         </button>
-        <div class="message-container"></div>
+        <div class="message-container custom-scrollbar"></div>
+    </div>
+    <div id="hint-box" class="flash" hidden>
+        <button class="flash-close">
+            <div class="octicon octicon-x"></div>
+        </button>
+        <div class="message-container custom-scrollbar"></div>
     </div>
 </div>
 

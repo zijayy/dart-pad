@@ -5,8 +5,9 @@
 import 'dart:async';
 import 'dart:html' hide Document;
 
-import 'package:dart_pad/sharing/gists.dart';
+import 'package:split/split.dart';
 
+import '../completion.dart';
 import '../core/dependencies.dart';
 import '../core/modules.dart';
 import '../dart_pad.dart';
@@ -18,7 +19,10 @@ import '../modules/dartservices_module.dart';
 import '../services/common.dart';
 import '../services/dartservices.dart';
 import '../services/execution_iframe.dart';
+import '../sharing/gists.dart';
 import '../src/util.dart';
+
+const int defaultSplitterWidth = 10;
 
 NewEmbed get newEmbed => _newEmbed;
 
@@ -33,40 +37,49 @@ void init() {
 class NewEmbed {
   DisableableButton executeButton;
   DisableableButton reloadGistButton;
+  DisableableButton formatButton;
+  DisableableButton showHintButton;
 
   DElement navBarElement;
   TabController tabController;
   TabView editorTabView;
   TabView testTabView;
+  TabView solutionTabView;
   ConsoleTabView consoleTabView;
+  DElement solutionTab;
 
   Counter unreadConsoleCounter;
 
   FlashBox testResultBox;
   FlashBox analysisResultBox;
+  FlashBox hintBox;
 
   ExecutionService executionSvc;
 
   EditorFactory editorFactory = codeMirrorFactory;
 
-  Editor testEditor;
   Editor userCodeEditor;
+  Editor testEditor;
+  Editor solutionEditor;
 
   NewEmbedContext context;
 
-  final _debounceTimer = DelayedTimer(
-    minDelay: Duration(milliseconds: 100),
-    maxDelay: Duration(milliseconds: 500),
+  Splitter splitter;
+
+  final DelayedTimer _debounceTimer = DelayedTimer(
+    minDelay: Duration(milliseconds: 1000),
+    maxDelay: Duration(milliseconds: 5000),
   );
 
   NewEmbed() {
     tabController = NewEmbedTabController();
-    for (String name in ['editor', 'test', 'console']) {
+    for (String name in ['editor', 'test', 'console', 'solution']) {
       tabController.registerTab(
         TabElement(querySelector('#$name-tab'), name: name, onSelect: () {
           editorTabView.setSelected(name == 'editor');
           testTabView.setSelected(name == 'test');
           consoleTabView.setSelected(name == 'console');
+          solutionTabView.setSelected(name == 'solution');
 
           if (name == 'editor') {
             userCodeEditor.resize();
@@ -74,6 +87,9 @@ class NewEmbed {
           } else if (name == 'test') {
             testEditor.resize();
             testEditor.focus();
+          } else if (name == 'solution') {
+            solutionEditor.resize();
+            solutionEditor.focus();
           } else {
             // Must be the console tab.
             unreadConsoleCounter.clear();
@@ -81,6 +97,8 @@ class NewEmbed {
         }),
       );
     }
+
+    solutionTab = DElement(querySelector('#solution-tab'));
 
     navBarElement = DElement(querySelector('#navbar'));
 
@@ -97,25 +115,54 @@ class NewEmbed {
 
     reloadGistButton.disabled = gistId.isEmpty;
 
+    showHintButton = DisableableButton(querySelector('#show-hint'), () {
+      var showSolutionButton = AnchorElement()
+        ..style.cursor = 'pointer'
+        ..text = 'Show solution';
+      showSolutionButton.onClick.listen((_) {
+        solutionTab.clearAttr('hidden');
+        tabController.selectTab('solution');
+      });
+      var hintElement = DivElement()..text = context.hint;
+      hintBox.showElements([hintElement, showSolutionButton]);
+    });
+
+    formatButton = DisableableButton(
+      querySelector('#format-code'),
+      _performFormat,
+    );
+
     testResultBox = FlashBox(querySelector('#test-result-box'));
     analysisResultBox = FlashBox(querySelector('#analysis-result-box'));
+    hintBox = FlashBox(querySelector('#hint-box'));
 
     userCodeEditor =
         editorFactory.createFromElement(querySelector('#user-code-editor'))
           ..theme = 'elegant'
           ..mode = 'dart'
           ..showLineNumbers = true;
-
     userCodeEditor.document.onChange.listen(_performAnalysis);
+    userCodeEditor.autoCloseBrackets = false;
 
     testEditor = editorFactory.createFromElement(querySelector('#test-editor'))
       ..theme = 'elegant'
       ..mode = 'dart'
+      // TODO(devoncarew): We should make this read-only after initial beta
+      // testing.
+      //..readOnly = true
       ..showLineNumbers = true;
+
+    solutionEditor =
+        editorFactory.createFromElement(querySelector('#solution-editor'))
+          ..theme = 'elegant'
+          ..mode = 'dart'
+          ..showLineNumbers = true;
 
     editorTabView = TabView(DElement(querySelector('#user-code-view')));
 
     testTabView = TabView(DElement(querySelector('#test-view')));
+
+    solutionTabView = TabView(DElement(querySelector('#solution-view')));
 
     consoleTabView = ConsoleTabView(DElement(querySelector('#console-view')));
 
@@ -169,41 +216,79 @@ class NewEmbed {
   void _initNewEmbed() {
     deps[GistLoader] = GistLoader.defaultFilters();
 
-    context = NewEmbedContext(userCodeEditor, testEditor);
+    context = NewEmbedContext(userCodeEditor, testEditor, solutionEditor);
+
+    editorFactory.registerCompleter(
+        'dart', DartCompleter(dartServices, userCodeEditor.document));
+    keys.bind(['ctrl-space', 'macctrl-space'], () {
+      if (userCodeEditor.hasFocus) {
+        userCodeEditor.showCompletions();
+      }
+    }, 'Completion');
+    document.onKeyUp.listen(_handleAutoCompletion);
 
     if (supportsFlutterWeb) {
+      var webOutput = querySelector('#web-output');
+      var userCodeEditor = querySelector('#user-code-editor');
       // Make the web output area visible.
-      querySelector('#web-output').removeAttribute('hidden');
+      webOutput.removeAttribute('hidden');
+
+      var splitterElements = [userCodeEditor, webOutput];
+
+      splitter = flexSplit(
+        splitterElements,
+        horizontal: true,
+        gutterSize: defaultSplitterWidth,
+        // set initial sizes (in percentages)
+        sizes: [70, 30],
+        // set the minimum sizes (in pixels)
+        minSize: [100, 100],
+      );
     }
 
     if (gistId.isNotEmpty) {
-      _loadAndShowGist(gistId);
+      _loadAndShowGist(gistId, analyze: false);
     }
+
+    // set enabled/disabled state of various buttons
+    editorIsBusy = false;
   }
 
   /// Toggles the state of several UI components based on whether the editor is
   /// too busy to handle code changes, execute/reset requests, etc.
   set editorIsBusy(bool value) {
     navBarElement.toggleClass('busy', value);
-    executeButton.disabled = value;
     userCodeEditor.readOnly = value;
-    testEditor.readOnly = value;
+    executeButton.disabled = value;
+    formatButton.disabled = value;
     reloadGistButton.disabled = value || gistId.isEmpty;
+    var hasHintOrSolution =
+        context.hint.isNotEmpty || context.solution.isNotEmpty;
+    showHintButton.disabled = value || !hasHintOrSolution;
   }
 
-  Future<void> _loadAndShowGist(String id) async {
+  Future<void> _loadAndShowGist(String id, {bool analyze = true}) async {
     editorIsBusy = true;
     final GistLoader loader = deps[GistLoader];
     final gist = await loader.loadGist(id);
     context.dartSource = gist.getFile('main.dart')?.content ?? '';
     context.testMethod = gist.getFile('test.dart')?.content ?? '';
+    context.solution = gist.getFile('solution.dart')?.content ?? '';
+    context.hint = gist.getFile('hint.txt')?.content ?? '';
     editorIsBusy = false;
+
+    if (analyze) {
+      _performAnalysis();
+    }
   }
 
   void _handleExecute() {
     editorIsBusy = true;
+    analysisResultBox.hide();
     testResultBox.hide();
+    hintBox.hide();
     consoleTabView.clear();
+    unreadConsoleCounter.clear();
 
     final fullCode = '${context.dartSource}\n${context.testMethod}\n'
         '${executionSvc.testResultDecoration}';
@@ -245,60 +330,50 @@ class NewEmbed {
   }
 
   void _displayIssues(List<AnalysisIssue> issues) {
-    int errorCount = 0;
-    int otherCount = 0;
+    analysisResultBox.hide();
+    testResultBox.hide();
+    hintBox.hide();
 
-    for (AnalysisIssue issue in issues) {
-      if (issue.kind == 'error') {
-        errorCount++;
-      } else if (issue.kind == 'info' || issue.kind == 'warning') {
-        otherCount++;
-      }
+    if (issues.isEmpty) {
+      return;
     }
 
-    if (errorCount == 0 && otherCount == 0) {
-      analysisResultBox.hide();
-    } else {
-      String message;
-      FlashBoxStyle style;
-
-      if (errorCount > 0 && otherCount > 0) {
-        message = 'Analyzer found $errorCount error${errorCount > 1 ? 's' : ''}'
-            ' and $otherCount other issue${otherCount > 1 ? 's' : ''}.';
-        style = FlashBoxStyle.error;
-      } else if (errorCount > 0) {
-        message =
-            'Analyzer found $errorCount error${errorCount > 1 ? 's' : ''}.';
-        style = FlashBoxStyle.error;
-      } else {
-        message =
-            'Analyzer found $otherCount issue${otherCount > 1 ? 's' : ''}';
-        style = FlashBoxStyle.warn;
+    List<String> messages = issues.map((AnalysisIssue issue) {
+      String message = issue.message;
+      if (message.endsWith('.')) {
+        message = message.substring(0, message.length - 1);
       }
+      return '$message - line ${issue.line}';
+    }).toList();
 
-      analysisResultBox.showStrings([message], style);
-    }
+    analysisResultBox.showStrings(messages, FlashBoxStyle.warn);
   }
 
   /// Perform static analysis of the source code.
-  void _performAnalysis(_) async {
+  void _performAnalysis([_]) {
     _debounceTimer.invoke(() {
       final dartServices = deps[DartservicesApi] as DartservicesApi;
-      final input = SourceRequest()..source = userCodeEditor.document.value;
-      final lines = Lines(input.source);
-      final request = dartServices.analyze(input).timeout(serviceCallTimeout);
+      final userSource = context.dartSource;
+      // Create a synthesis of the user code and other code to analyze.
+      final fullSource = '$userSource\n'
+          '${context.testMethod}\n'
+          '${executionSvc.testResultDecoration}\n';
+      final sourceRequest = SourceRequest()..source = fullSource;
+      final lines = Lines(sourceRequest.source);
 
-      request.then((AnalysisResults result) {
+      dartServices
+          .analyze(sourceRequest)
+          .timeout(serviceCallTimeout)
+          .then((AnalysisResults result) {
         // Discard if the document has been mutated since we requested analysis.
-        if (input.source != userCodeEditor.document.value) return false;
+        if (userSource != context.dartSource) return;
 
         _displayIssues(result.issues);
 
-        userCodeEditor.document
-            .setAnnotations(result.issues.map((AnalysisIssue issue) {
-          final startLine = lines.getLineForOffset(issue.charStart);
-          final endLine =
-              lines.getLineForOffset(issue.charStart + issue.charLength);
+        Iterable<Annotation> issues = result.issues.map((AnalysisIssue issue) {
+          final charStart = issue.charStart;
+          final startLine = lines.getLineForOffset(charStart);
+          final endLine = lines.getLineForOffset(charStart + issue.charLength);
 
           return Annotation(
             issue.kind,
@@ -306,18 +381,61 @@ class NewEmbed {
             issue.line,
             start: Position(
               startLine,
-              issue.charStart - lines.offsetForLine(startLine),
+              charStart - lines.offsetForLine(startLine),
             ),
             end: Position(
               endLine,
-              issue.charStart +
-                  issue.charLength -
-                  lines.offsetForLine(startLine),
+              charStart + issue.charLength - lines.offsetForLine(startLine),
             ),
           );
-        }).toList());
+        });
+
+        userCodeEditor.document.setAnnotations(issues.toList());
+      }).catchError((e) {
+        if (e is! TimeoutException) {
+          final String message = e is ApiRequestError ? e.message : '$e';
+
+          _displayIssues([
+            AnalysisIssue()
+              ..kind = 'error'
+              ..line = 1
+              ..message = message
+          ]);
+          userCodeEditor.document.setAnnotations([]);
+        }
       });
     });
+  }
+
+  void _performFormat() async {
+    String originalSource = userCodeEditor.document.value;
+    SourceRequest input = SourceRequest()..source = originalSource;
+
+    try {
+      formatButton.disabled = true;
+      FormatResponse result =
+          await dartServices.format(input).timeout(serviceCallTimeout);
+
+      formatButton.disabled = false;
+
+      // Check that the user hasn't edited the source since the format request.
+      if (originalSource == userCodeEditor.document.value) {
+        // And, check that the format request did modify the source code.
+        if (originalSource != result.newString) {
+          userCodeEditor.document.updateValue(result.newString);
+          _performAnalysis();
+        }
+      }
+    } catch (e) {
+      formatButton.disabled = false;
+      print(e);
+    }
+  }
+
+  void _handleAutoCompletion(KeyboardEvent e) {
+    if (userCodeEditor.hasFocus && e.keyCode == KeyCode.PERIOD) {
+      userCodeEditor.showCompletions(autoInvoked: true);
+    }
   }
 
   bool get supportsFlutterWeb {
@@ -403,14 +521,24 @@ class DisableableButton {
       : assert(anchorElement != null),
         assert(onClick != null) {
     _element = DElement(anchorElement);
-    _element.onClick.listen((e) => onClick());
+    _element.onClick.listen((e) {
+      if (!_disabled) {
+        onClick();
+      }
+    });
   }
 
   static const disabledClassName = 'disabled';
 
   DElement _element;
 
-  set disabled(bool value) => _element.toggleClass(disabledClassName, value);
+  bool _disabled = false;
+
+  bool get disabled => _disabled;
+  set disabled(bool value) {
+    _disabled = value;
+    _element.toggleClass(disabledClassName, value);
+  }
 }
 
 class Octicon {
@@ -491,8 +619,13 @@ class FlashBox {
 class NewEmbedContext {
   final Editor userCodeEditor;
   final Editor testEditor;
+  final Editor solutionEditor;
 
   Document _dartDoc;
+
+  String hint = '';
+
+  String _solution = '';
 
   String get testMethod => testEditor.document.value;
 
@@ -500,11 +633,17 @@ class NewEmbedContext {
     testEditor.document.value = value;
   }
 
+  String get solution => _solution;
+  set solution(String value) {
+    _solution = value;
+    solutionEditor.document.value = value;
+  }
+
   final _dartDirtyController = StreamController.broadcast();
 
   final _dartReconcileController = StreamController.broadcast();
 
-  NewEmbedContext(this.userCodeEditor, this.testEditor) {
+  NewEmbedContext(this.userCodeEditor, this.testEditor, this.solutionEditor) {
     _dartDoc = userCodeEditor.document;
     _dartDoc.onChange.listen((_) => _dartDirtyController.add(null));
     _createReconciler(_dartDoc, _dartReconcileController, 1250);
