@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:html' hide Document;
+import 'dart:math' as math;
 
 import 'package:split/split.dart';
 
@@ -41,7 +42,7 @@ class NewEmbed {
   DisableableButton showHintButton;
 
   DElement navBarElement;
-  TabController tabController;
+  NewEmbedTabController tabController;
   TabView editorTabView;
   TabView testTabView;
   TabView solutionTabView;
@@ -51,7 +52,6 @@ class NewEmbed {
   Counter unreadConsoleCounter;
 
   FlashBox testResultBox;
-  FlashBox analysisResultBox;
   FlashBox hintBox;
 
   ExecutionService executionSvc;
@@ -65,13 +65,31 @@ class NewEmbed {
   NewEmbedContext context;
 
   Splitter splitter;
+  AnalysisResultsController analysisResultsController;
 
   final DelayedTimer _debounceTimer = DelayedTimer(
     minDelay: Duration(milliseconds: 1000),
     maxDelay: Duration(milliseconds: 5000),
   );
 
+  bool _editorIsBusy = true;
+
+  bool get editorIsBusy => _editorIsBusy;
+
+  /// Toggles the state of several UI components based on whether the editor is
+  /// too busy to handle code changes, execute/reset requests, etc.
+  set editorIsBusy(bool value) {
+    _editorIsBusy = value;
+    navBarElement.toggleClass('busy', value);
+    userCodeEditor.readOnly = value;
+    executeButton.disabled = value;
+    formatButton.disabled = value;
+    reloadGistButton.disabled = value || gistId.isEmpty;
+    showHintButton.disabled = value;
+  }
+
   NewEmbed() {
+    _initHostListener();
     tabController = NewEmbedTabController();
     for (String name in ['editor', 'test', 'console', 'solution']) {
       tabController.registerTab(
@@ -133,19 +151,19 @@ class NewEmbed {
     );
 
     testResultBox = FlashBox(querySelector('#test-result-box'));
-    analysisResultBox = FlashBox(querySelector('#analysis-result-box'));
     hintBox = FlashBox(querySelector('#hint-box'));
+    var editorTheme = isDarkMode ? 'zenburn' : 'elegant';
 
     userCodeEditor =
         editorFactory.createFromElement(querySelector('#user-code-editor'))
-          ..theme = 'elegant'
+          ..theme = editorTheme
           ..mode = 'dart'
           ..showLineNumbers = true;
     userCodeEditor.document.onChange.listen(_performAnalysis);
     userCodeEditor.autoCloseBrackets = false;
 
     testEditor = editorFactory.createFromElement(querySelector('#test-editor'))
-      ..theme = 'elegant'
+      ..theme = editorTheme
       ..mode = 'dart'
       // TODO(devoncarew): We should make this read-only after initial beta
       // testing.
@@ -154,7 +172,7 @@ class NewEmbed {
 
     solutionEditor =
         editorFactory.createFromElement(querySelector('#solution-editor'))
-          ..theme = 'elegant'
+          ..theme = editorTheme
           ..mode = 'dart'
           ..showLineNumbers = true;
 
@@ -166,7 +184,9 @@ class NewEmbed {
 
     consoleTabView = ConsoleTabView(DElement(querySelector('#console-view')));
 
-    executionSvc = ExecutionServiceIFrame(querySelector('#frame'));
+    executionSvc = ExecutionServiceIFrame(querySelector('#frame'))
+      ..frameSrc =
+          isDarkMode ? '../scripts/frame_dark.html' : '../scripts/frame.html';
 
     executionSvc.onStderr.listen((err) {
       if (tabController.selectedTab.name != 'console') {
@@ -183,13 +203,47 @@ class NewEmbed {
     });
 
     executionSvc.testResults.listen((result) {
+      if (result.messages.isEmpty) {
+        result.messages.add(result.success ? 'Test passed!' : 'Test failed.');
+      }
       testResultBox.showStrings(
-        result.messages.isNotEmpty ? result.messages : ['Test passed!'],
+        result.messages,
         result.success ? FlashBoxStyle.success : FlashBoxStyle.warn,
       );
     });
 
-    _initModules().then((_) => _initNewEmbed());
+    analysisResultsController = AnalysisResultsController(
+        DElement(querySelector('#issues')),
+        DElement(querySelector('#issues-message')),
+        DElement(querySelector('#issues-toggle')))
+      ..onIssueClick.listen((issue) {
+        _jumpTo(issue.line, issue.charStart, issue.charLength, focus: true);
+      });
+    _initModules().then((_) => _initNewEmbed()).then((_) => _emitReady());
+  }
+
+  /// Initializes a listener for messages from the parent window. Allows this
+  /// embedded iframe to display and run arbitrary Dart code.
+  void _initHostListener() {
+    window.addEventListener('message', (dynamic event) {
+      var data = event.data;
+      if (data is! Map) {
+        // Ignore unexpected messages
+        return;
+      }
+
+      var type = data['type'];
+
+      if (type == 'sourceCode') {
+        var sourceCode = data['sourceCode'];
+        userCodeEditor.document.value = sourceCode;
+      }
+    });
+  }
+
+  /// Sends a ready message to the parent page
+  void _emitReady() {
+    window.parent.postMessage({'sender': 'frame', 'type': 'ready'}, '*');
   }
 
   String get gistId {
@@ -220,11 +274,19 @@ class NewEmbed {
 
     editorFactory.registerCompleter(
         'dart', DartCompleter(dartServices, userCodeEditor.document));
+
     keys.bind(['ctrl-space', 'macctrl-space'], () {
       if (userCodeEditor.hasFocus) {
         userCodeEditor.showCompletions();
       }
     }, 'Completion');
+
+    keys.bind(['alt-enter'], () {
+      userCodeEditor.showCompletions(onlyShowFixes: true);
+    }, 'Quick fix');
+
+    keys.bind(['ctrl-enter', 'macctrl-enter'], _handleExecute, 'Run');
+
     document.onKeyUp.listen(_handleAutoCompletion);
 
     if (supportsFlutterWeb) {
@@ -240,7 +302,7 @@ class NewEmbed {
         horizontal: true,
         gutterSize: defaultSplitterWidth,
         // set initial sizes (in percentages)
-        sizes: [70, 30],
+        sizes: [initialSplitPercent, (100 - initialSplitPercent)],
         // set the minimum sizes (in pixels)
         minSize: [100, 100],
       );
@@ -254,27 +316,17 @@ class NewEmbed {
     editorIsBusy = false;
   }
 
-  /// Toggles the state of several UI components based on whether the editor is
-  /// too busy to handle code changes, execute/reset requests, etc.
-  set editorIsBusy(bool value) {
-    navBarElement.toggleClass('busy', value);
-    userCodeEditor.readOnly = value;
-    executeButton.disabled = value;
-    formatButton.disabled = value;
-    reloadGistButton.disabled = value || gistId.isEmpty;
-    var hasHintOrSolution =
-        context.hint.isNotEmpty || context.solution.isNotEmpty;
-    showHintButton.disabled = value || !hasHintOrSolution;
-  }
-
   Future<void> _loadAndShowGist(String id, {bool analyze = true}) async {
     editorIsBusy = true;
+
     final GistLoader loader = deps[GistLoader];
     final gist = await loader.loadGist(id);
     context.dartSource = gist.getFile('main.dart')?.content ?? '';
     context.testMethod = gist.getFile('test.dart')?.content ?? '';
     context.solution = gist.getFile('solution.dart')?.content ?? '';
     context.hint = gist.getFile('hint.txt')?.content ?? '';
+    tabController.setTabVisibility('test', context.testMethod.isNotEmpty);
+    showHintButton.hidden = context.hint.isEmpty && context.testMethod.isEmpty;
     editorIsBusy = false;
 
     if (analyze) {
@@ -283,8 +335,11 @@ class NewEmbed {
   }
 
   void _handleExecute() {
+    if (editorIsBusy) {
+      return;
+    }
+
     editorIsBusy = true;
-    analysisResultBox.hide();
     testResultBox.hide();
     hintBox.hide();
     consoleTabView.clear();
@@ -330,23 +385,9 @@ class NewEmbed {
   }
 
   void _displayIssues(List<AnalysisIssue> issues) {
-    analysisResultBox.hide();
     testResultBox.hide();
     hintBox.hide();
-
-    if (issues.isEmpty) {
-      return;
-    }
-
-    List<String> messages = issues.map((AnalysisIssue issue) {
-      String message = issue.message;
-      if (message.endsWith('.')) {
-        message = message.substring(0, message.length - 1);
-      }
-      return '$message - line ${issue.line}';
-    }).toList();
-
-    analysisResultBox.showStrings(messages, FlashBoxStyle.warn);
+    analysisResultsController.display(issues);
   }
 
   /// Perform static analysis of the source code.
@@ -439,8 +480,39 @@ class NewEmbed {
   }
 
   bool get supportsFlutterWeb {
-    Uri url = Uri.parse(window.location.toString());
+    final url = Uri.parse(window.location.toString());
     return url.queryParameters['fw'] == 'true';
+  }
+
+  bool get isDarkMode {
+    final url = Uri.parse(window.location.toString());
+    return url.queryParameters['theme'] == 'dark';
+  }
+
+  int get initialSplitPercent {
+    const int defaultSplitPercentage = 70;
+
+    final url = Uri.parse(window.location.toString());
+    if (!url.queryParameters.containsKey('split')) {
+      return defaultSplitPercentage;
+    }
+
+    var s =
+        int.tryParse(url.queryParameters['split']) ?? defaultSplitPercentage;
+
+    // keep the split within the range [5, 95]
+    s = math.min(s, 95);
+    s = math.max(s, 5);
+    return s;
+  }
+
+  void _jumpTo(int line, int charStart, int charLength, {bool focus = false}) {
+    Document doc = userCodeEditor.document;
+
+    doc.select(
+        doc.posFromIndex(charStart), doc.posFromIndex(charStart + charLength));
+
+    if (focus) userCodeEditor.focus();
   }
 }
 
@@ -458,6 +530,11 @@ class NewEmbedTabController extends TabController {
     }
 
     super.selectTab(tabName);
+  }
+
+  void setTabVisibility(String tabName, bool visible) {
+    TabElement tab = tabs.firstWhere((t) => t.name == tabName);
+    tab.toggleAttr('hidden', !visible);
   }
 }
 
@@ -477,20 +554,20 @@ class TabView {
 }
 
 class ConsoleTabView extends TabView {
-  const ConsoleTabView(DElement element) : super(element);
+  ConsoleTabView(DElement element) : super(element);
 
   void clear() {
     element.text = '';
   }
 
   void appendMessage(String msg) {
-    final line = DivElement()..text = msg;
+    final line = DivElement()..text = filterCloudUrls(msg);
     element.add(line);
   }
 
   void appendError(String err) {
     final line = DivElement()
-      ..text = err
+      ..text = filterCloudUrls(err)
       ..classes.add('text-red');
     element.add(line);
   }
@@ -535,9 +612,14 @@ class DisableableButton {
   bool _disabled = false;
 
   bool get disabled => _disabled;
+
   set disabled(bool value) {
     _disabled = value;
     _element.toggleClass(disabledClassName, value);
+  }
+
+  set hidden(bool value) {
+    _element.toggleAttr('hidden', value);
   }
 }
 
@@ -614,6 +696,112 @@ class FlashBox {
   void hide() {
     _element.setAttr('hidden');
   }
+
+  void show() {
+    _element.clearAttr('hidden');
+  }
+}
+
+class AnalysisResultsController {
+  static const String _noIssuesMsg = 'no issues';
+  static const String _hideMsg = 'hide';
+  static const String _showMsg = 'show';
+
+  static const Map<String, List<String>> _classesForType = {
+    'info': ['issuelabel', 'info'],
+    'warning': ['issuelabel', 'warning'],
+    'error': ['issuelabel', 'error'],
+  };
+
+  DElement flash;
+  DElement message;
+  DElement toggle;
+  bool _flashHidden = true;
+
+  final StreamController<AnalysisIssue> _onClickController =
+      StreamController.broadcast();
+
+  Stream<AnalysisIssue> get onIssueClick => _onClickController.stream;
+
+  AnalysisResultsController(this.flash, this.message, this.toggle) {
+    hideFlash();
+    message.text = _noIssuesMsg;
+    toggle.onClick.listen((_) {
+      if (_flashHidden) {
+        showFlash();
+      } else {
+        hideFlash();
+      }
+    });
+  }
+
+  void display(List<AnalysisIssue> issues) {
+    if (issues.isEmpty) {
+      message.text = _noIssuesMsg;
+
+      // hide the flash without toggling the hidden state
+      flash.setAttr('hidden');
+
+      hideToggle();
+      return;
+    }
+
+    // show the flash without toggling the hidden state
+    if (!_flashHidden) {
+      flash.clearAttr('hidden');
+    }
+
+    showToggle();
+    message.text = '${issues.length} issues';
+
+    flash.clearChildren();
+    for (var elem in issues.map(_issueElement)) {
+      flash.add(elem);
+    }
+  }
+
+  Element _issueElement(AnalysisIssue issue) {
+    var message = issue.message;
+    if (issue.message.endsWith('.')) {
+      message = message.substring(0, message.length - 1);
+    }
+
+    var elem = DivElement()..classes.add('issue');
+
+    elem.children.add(SpanElement()
+      ..text = issue.kind
+      ..classes.addAll(_classesForType[issue.kind]));
+
+    elem.children.add(SpanElement()
+      ..text = '$message - line ${issue.line}'
+      ..classes.add('message'));
+
+    elem.onClick.listen((_) {
+      _onClickController.add(issue);
+    });
+
+    return elem;
+  }
+
+  void hideToggle() {
+    toggle.setAttr('hidden');
+  }
+
+  void showToggle() {
+    toggle.clearAttr('hidden');
+  }
+
+  void hideFlash() {
+    flash.setAttr('hidden');
+    _flashHidden = true;
+    toggle.text = _showMsg;
+  }
+
+  void showFlash() {
+    _flashHidden = false;
+    flash.clearAttr('hidden');
+    toggle.text = _hideMsg;
+  }
 }
 
 class NewEmbedContext {
@@ -634,6 +822,7 @@ class NewEmbedContext {
   }
 
   String get solution => _solution;
+
   set solution(String value) {
     _solution = value;
     solutionEditor.document.value = value;
@@ -683,4 +872,16 @@ class NewEmbedContext {
     // TODO(DomesticMouse): implement with CodeMirror integration
     return false;
   }
+}
+
+final RegExp _flutterUrlExp =
+    RegExp(r'(https:[a-zA-Z0-9_=%&\/\-\?\.]+flutter_web\.js)(:\d+:\d+)');
+final RegExp _dartUrlExp =
+    RegExp(r'(https:[a-zA-Z0-9_=%&\/\-\?\.]+dart_sdk\.js)(:\d+:\d+)');
+
+String filterCloudUrls(String trace) {
+  return trace
+      .replaceAllMapped(
+          _flutterUrlExp, (m) => '[Flutter SDK Source]${m.group(2)}')
+      .replaceAllMapped(_dartUrlExp, (m) => '[Dart SDK Source]${m.group(2)}');
 }
