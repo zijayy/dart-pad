@@ -42,14 +42,9 @@ BSD-style license that can be found in the LICENSE file. -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
           rel="stylesheet">
     <!-- end Material Design -->
-
-    <!-- Test package stuff -->
-    <link rel="x-dart-test" href="new_embed_test.dart">
-    <script src="packages/test/dart.js"></script>
 </head>
 
 <body class="d-flex flex-column">
-
 <div id="navbar">
     <nav class="tabnav-tabs">
         <div class="mdc-tab-bar" role="tablist">
@@ -124,37 +119,28 @@ BSD-style license that can be found in the LICENSE file. -->
     </div>
 </div>
 <section id="tab-container">
-    <div id="editor-and-console-container">
-        <div id="editor-container">
-            <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
-                <div id="user-code-editor" spellcheck="false"></div>
-            </div>
-            <div id="solution-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="solution-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
-            </div>
-            <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
-            </div>
+    <div id="editor-container">
+        <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
+            <div id="user-code-editor" spellcheck="false"></div>
         </div>
-        <div id="console-output-footer" class="footer-top-border" hidden>
-            <div class="console-output-header">
-                <span class="view-label">
-                    Console <span id="unread-console-counter" class="Counter" hidden></span>
-                </span>
-                <button id="console-expand-button" class="flash-close">
-                    <div id="console-expand-icon" class="octicon octicon-triangle-up"></div>
-                </button>
-            </div>
-            <div id="console-output-container" class="custom-scrollbar" hidden></div>
+        <div id="solution-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
+            <div id="solution-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
+        </div>
+        <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
+            <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
         </div>
     </div>
-    <div id="web-output">
-        <span id="web-output-label" class="position-absolute view-label">UI Output</span>
+    <div id="console-view" hidden>
+        <div class="console-output-header">
+            <span class="view-label">Console <span id="unread-console-counter" class="Counter" hidden></span></span>
+        </div>
+        <div id="console-output-container" class="custom-scrollbar" hidden></div>
+    </div>
+    <div id="web-output" hidden>
         <iframe id="frame" sandbox="allow-scripts" class="flex-auto">
         </iframe>
     </div>
 </section>
-
 <footer flex layout horizontal class="footer">
     <div id="issues-message"></div>
     <button id="issues-toggle" class="mdc-button mdc-button--dense mdc-button--outlined" hidden></button>

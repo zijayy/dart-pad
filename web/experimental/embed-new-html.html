@@ -31,7 +31,7 @@ BSD-style license that can be found in the LICENSE file. -->
     <script src="../packages/codemirror/codemirror.js" defer></script>
     <script src="../packages/split/split.min.js" defer></script>
 
-    <script defer src="new_embed_dart.dart.js"></script>
+    <script defer src="new_embed_html.dart.js"></script>
     <script defer src="../scripts/ga.js"></script>
     <script defer src="../scripts/polymerpatch.js"></script>
     <script type="text/javascript" src="dark_mode.js"></script>
@@ -42,10 +42,6 @@ BSD-style license that can be found in the LICENSE file. -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
           rel="stylesheet">
     <!-- end Material Design -->
-
-    <!-- Test package stuff -->
-    <link rel="x-dart-test" href="new_embed_test.dart">
-    <script src="packages/test/dart.js"></script>
 </head>
 
 <body class="d-flex flex-column">
@@ -59,25 +55,25 @@ BSD-style license that can be found in the LICENSE file. -->
                         <button id="editor-tab" class="mdc-tab mdc-tab--active" role="tab" aria-selected="true"
                                 tabindex="0">
                              <span class="mdc-tab__content">
-                                 <span class="mdc-tab__text-label">Your code</span>
+                                 <span class="mdc-tab__text-label">Dart</span>
                              </span>
                             <span class="mdc-tab-indicator mdc-tab-indicator--active">
                                  <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
                              </span>
                             <span class="mdc-tab__ripple"></span>
                         </button>
-                        <button id="solution-tab" class="mdc-tab mdc-tab" role="tab" tabindex="0" hidden>
+                        <button id="html-tab" class="mdc-tab mdc-tab" role="tab" tabindex="0">
                              <span class="mdc-tab__content">
-                                 <span class="mdc-tab__text-label">Solution</span>
+                                 <span class="mdc-tab__text-label">HTML</span>
                              </span>
                             <span class="mdc-tab-indicator mdc-tab-indicator">
                                  <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
                              </span>
                             <span class="mdc-tab__ripple"></span>
                         </button>
-                        <button id="test-tab" class="mdc-tab mdc-tab" role="tab" tabindex="0">
+                        <button id="css-tab" class="mdc-tab mdc-tab" role="tab" tabindex="0">
                              <span class="mdc-tab__content">
-                                 <span class="mdc-tab__text-label">Tests</span>
+                                 <span class="mdc-tab__text-label">CSS</span>
                             </span>
                             <span class="mdc-tab-indicator mdc-tab-indicator">
                                  <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
@@ -123,17 +119,18 @@ BSD-style license that can be found in the LICENSE file. -->
         </div>
     </div>
 </div>
+
 <section id="tab-container">
     <div id="editor-and-console-container">
         <div id="editor-container">
             <div id="user-code-view" class="flex-auto d-flex flex-row no-overflow">
                 <div id="user-code-editor" spellcheck="false"></div>
             </div>
-            <div id="solution-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="solution-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
+            <div id="html-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
+                <div id="html-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
             </div>
-            <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
-                <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
+            <div id="css-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
+                <div id="css-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
             </div>
         </div>
         <div id="console-output-footer" class="footer-top-border" hidden>

@@ -29,39 +29,25 @@ NewEmbed get newEmbed => _newEmbed;
 
 NewEmbed _newEmbed;
 
-void init(NewEmbedOptions options) {
-  _newEmbed = NewEmbed(options);
-}
-
-enum NewEmbedMode { dart, flutter, html, inline }
-
-class NewEmbedOptions {
-  final NewEmbedMode mode;
-  NewEmbedOptions(this.mode);
+void init() {
+  _newEmbed = NewEmbed();
 }
 
 /// An embeddable DartPad UI that provides the ability to test the user's code
 /// snippet against a desired result.
 class NewEmbed {
-  final NewEmbedOptions options;
   DisableableButton executeButton;
   DisableableButton reloadGistButton;
   DisableableButton formatButton;
   DisableableButton showHintButton;
-  DisableableButton menuButton;
 
   DElement navBarElement;
   NewEmbedTabController tabController;
   TabView editorTabView;
   TabView testTabView;
   TabView solutionTabView;
-  TabView htmlTabView;
-  TabView cssTabView;
+  ConsoleTabView consoleTabView;
   DElement solutionTab;
-
-  DElement morePopover;
-  DInput showTestCodeCheckbox;
-  bool _showTestCode = false;
 
   Counter unreadConsoleCounter;
 
@@ -75,16 +61,11 @@ class NewEmbed {
   Editor userCodeEditor;
   Editor testEditor;
   Editor solutionEditor;
-  Editor htmlEditor;
-  Editor cssEditor;
 
   NewEmbedContext context;
 
   Splitter splitter;
   AnalysisResultsController analysisResultsController;
-
-  ConsoleController consoleExpandController;
-  DElement webOutputLabel;
 
   final DelayedTimer _debounceTimer = DelayedTimer(
     minDelay: Duration(milliseconds: 1000),
@@ -104,26 +85,19 @@ class NewEmbed {
     executeButton.disabled = value;
     formatButton.disabled = value;
     reloadGistButton.disabled = value || gistId.isEmpty;
-    showHintButton?.disabled = value;
+    showHintButton.disabled = value;
   }
 
-  NewEmbed(this.options) {
+  NewEmbed() {
     _initHostListener();
     tabController = NewEmbedTabController();
-
-    var tabNames = ['editor', 'test', 'solution'];
-    if (options.mode == NewEmbedMode.html) {
-      tabNames = ['editor', 'html', 'css'];
-    }
-
-    for (var name in tabNames) {
+    for (String name in ['editor', 'test', 'console', 'solution']) {
       tabController.registerTab(
         TabElement(querySelector('#$name-tab'), name: name, onSelect: () {
-          editorTabView?.setSelected(name == 'editor');
-          testTabView?.setSelected(name == 'test');
-          solutionTabView?.setSelected(name == 'solution');
-          htmlTabView?.setSelected(name == 'html');
-          cssTabView?.setSelected(name == 'css');
+          editorTabView.setSelected(name == 'editor');
+          testTabView.setSelected(name == 'test');
+          consoleTabView.setSelected(name == 'console');
+          solutionTabView.setSelected(name == 'solution');
 
           if (name == 'editor') {
             userCodeEditor.resize();
@@ -134,12 +108,9 @@ class NewEmbed {
           } else if (name == 'solution') {
             solutionEditor.resize();
             solutionEditor.focus();
-          } else if (name == 'html') {
-            htmlEditor.resize();
-            htmlEditor.focus();
-          } else if (name == 'css') {
-            cssEditor.resize();
-            cssEditor.focus();
+          } else {
+            // Must be the console tab.
+            unreadConsoleCounter.clear();
           }
         }),
       );
@@ -162,31 +133,16 @@ class NewEmbed {
 
     reloadGistButton.disabled = gistId.isEmpty;
 
-    if (options.mode != NewEmbedMode.html) {
-      showHintButton = DisableableButton(querySelector('#show-hint'), () {
-        var showSolutionButton = AnchorElement()
-          ..style.cursor = 'pointer'
-          ..text = 'Show solution';
-        showSolutionButton.onClick.listen((_) {
-          solutionTab.clearAttr('hidden');
-          tabController.selectTab('solution');
-        });
-        var hintElement = DivElement()..text = context.hint;
-        hintBox.showElements([hintElement, showSolutionButton]);
+    showHintButton = DisableableButton(querySelector('#show-hint'), () {
+      var showSolutionButton = AnchorElement()
+        ..style.cursor = 'pointer'
+        ..text = 'Show solution';
+      showSolutionButton.onClick.listen((_) {
+        solutionTab.clearAttr('hidden');
+        tabController.selectTab('solution');
       });
-    }
-
-    tabController.setTabVisibility('test', false);
-    showTestCodeCheckbox = DInput(querySelector('#show-test-checkbox'));
-    showTestCodeCheckbox.onClick.listen((e) {
-      _showTestCode = !_showTestCode;
-      tabController.setTabVisibility('test', _showTestCode);
-    });
-
-    morePopover = DElement(querySelector('#more-popover'));
-    menuButton = DisableableButton(querySelector('#menu-button'), () {
-      var popoverHidden = morePopover.hasAttr('hidden');
-      morePopover.toggleAttr('hidden', !popoverHidden);
+      var hintElement = DivElement()..text = context.hint;
+      hintBox.showElements([hintElement, showSolutionButton]);
     });
 
     formatButton = DisableableButton(
@@ -196,76 +152,54 @@ class NewEmbed {
 
     testResultBox = FlashBox(querySelector('#test-result-box'));
     hintBox = FlashBox(querySelector('#hint-box'));
-    var editorTheme = isDarkMode ? 'darkpad' : 'dartpad';
+    var editorTheme = isDarkMode ? 'zenburn' : 'elegant';
 
     userCodeEditor =
-        editorFactory.createFromElement(querySelector('#user-code-editor'))
-          ..theme = editorTheme
-          ..mode = 'dart'
-          ..showLineNumbers = true;
+    editorFactory.createFromElement(querySelector('#user-code-editor'))
+      ..theme = editorTheme
+      ..mode = 'dart'
+      ..showLineNumbers = true;
     userCodeEditor.document.onChange.listen(_performAnalysis);
     userCodeEditor.autoCloseBrackets = false;
 
     testEditor = editorFactory.createFromElement(querySelector('#test-editor'))
       ..theme = editorTheme
       ..mode = 'dart'
-      // TODO(devoncarew): We should make this read-only after initial beta
-      // testing.
-      //..readOnly = true
+    // TODO(devoncarew): We should make this read-only after initial beta
+    // testing.
+    //..readOnly = true
       ..showLineNumbers = true;
 
     solutionEditor =
-        editorFactory.createFromElement(querySelector('#solution-editor'))
-          ..theme = editorTheme
-          ..mode = 'dart'
-          ..showLineNumbers = true;
-
-    htmlEditor = editorFactory.createFromElement(querySelector('#html-editor'))
+    editorFactory.createFromElement(querySelector('#solution-editor'))
       ..theme = editorTheme
-      // TODO(ryjohn): why doesn't editorFactory.modes have html?
-      ..mode = 'xml'
+      ..mode = 'dart'
       ..showLineNumbers = true;
 
-    cssEditor = editorFactory.createFromElement(querySelector('#css-editor'))
-      ..theme = editorTheme
-      ..mode = 'css'
-      ..showLineNumbers = true;
+    editorTabView = TabView(DElement(querySelector('#user-code-view')));
 
-    var editorTabViewElement = querySelector('#user-code-view');
-    if (editorTabViewElement != null) {
-      editorTabView = TabView(DElement(editorTabViewElement));
-    }
+    testTabView = TabView(DElement(querySelector('#test-view')));
 
-    var testTabViewElement = querySelector('#test-view');
-    if (testTabViewElement != null) {
-      testTabView = TabView(DElement(testTabViewElement));
-    }
+    solutionTabView = TabView(DElement(querySelector('#solution-view')));
 
-    var solutionTabViewElement = querySelector('#solution-view');
-    if (solutionTabViewElement != null) {
-      solutionTabView = TabView(DElement(solutionTabViewElement));
-    }
-
-    var htmlTabViewElement = querySelector('#html-view');
-    if (htmlTabViewElement != null) {
-      htmlTabView = TabView(DElement(htmlTabViewElement));
-    }
-
-    var cssTabViewElement = querySelector('#css-view');
-    if (cssTabViewElement != null) {
-      cssTabView = TabView(DElement(querySelector('#css-view')));
-    }
+    consoleTabView = ConsoleTabView(DElement(querySelector('#console-view')));
 
     executionSvc = ExecutionServiceIFrame(querySelector('#frame'))
       ..frameSrc =
-          isDarkMode ? '../scripts/frame_dark.html' : '../scripts/frame.html';
+      isDarkMode ? '../scripts/frame_dark.html' : '../scripts/frame.html';
 
     executionSvc.onStderr.listen((err) {
-      consoleExpandController.appendError(err);
+      if (tabController.selectedTab.name != 'console') {
+        unreadConsoleCounter.increment();
+      }
+      consoleTabView.appendError(err);
     });
 
     executionSvc.onStdout.listen((msg) {
-      consoleExpandController.appendMessage(msg);
+      if (tabController.selectedTab.name != 'console') {
+        unreadConsoleCounter.increment();
+      }
+      consoleTabView.appendMessage(msg);
     });
 
     executionSvc.testResults.listen((result) {
@@ -285,25 +219,6 @@ class NewEmbed {
       ..onIssueClick.listen((issue) {
         _jumpTo(issue.line, issue.charStart, issue.charLength, focus: true);
       });
-
-    if (options.mode == NewEmbedMode.flutter ||
-        options.mode == NewEmbedMode.html) {
-      consoleExpandController = ConsoleExpandController(
-          expandButton: querySelector('#console-expand-button'),
-          footer: querySelector('#console-output-footer'),
-          expandIcon: querySelector('#console-expand-icon'),
-          unreadCounter: unreadConsoleCounter,
-          consoleElement: querySelector('#console-output-container'));
-    } else {
-      consoleExpandController =
-          ConsoleController(querySelector('#console-output-container'));
-    }
-
-    var webOutputLabelElement = querySelector('#web-output-label');
-    if (webOutputLabelElement != null) {
-      webOutputLabel = DElement(webOutputLabelElement);
-    }
-
     _initModules().then((_) => _initNewEmbed()).then((_) => _emitReady());
   }
 
@@ -321,11 +236,7 @@ class NewEmbed {
 
       if (type == 'sourceCode') {
         var sourceCode = data['sourceCode'];
-        userCodeEditor.document.value = sourceCode['main.dart'] ?? '';
-        solutionEditor.document.value = sourceCode['solution.dart'] ?? '';
-        testEditor.document.value = sourceCode['test.dart'] ?? '';
-        htmlEditor.document.value = sourceCode['index.html'] ?? '';
-        cssEditor.document.value = sourceCode['styles.css'] ?? '';
+        userCodeEditor.document.value = sourceCode;
       }
     });
   }
@@ -359,8 +270,7 @@ class NewEmbed {
   void _initNewEmbed() {
     deps[GistLoader] = GistLoader.defaultFilters();
 
-    context = NewEmbedContext(
-        userCodeEditor, testEditor, solutionEditor, htmlEditor, cssEditor);
+    context = NewEmbedContext(userCodeEditor, testEditor, solutionEditor);
 
     editorFactory.registerCompleter(
         'dart', DartCompleter(dartServices, userCodeEditor.document));
@@ -379,36 +289,24 @@ class NewEmbed {
 
     document.onKeyUp.listen(_handleAutoCompletion);
 
-    var horizontal = true;
-    var webOutput = querySelector('#web-output');
-    List splitterElements;
-    if (options.mode == NewEmbedMode.flutter ||
-        options.mode == NewEmbedMode.html) {
-      var editorAndConsoleContainer =
-          querySelector('#editor-and-console-container');
-      splitterElements = [editorAndConsoleContainer, webOutput];
-    } else if (options.mode == NewEmbedMode.inline) {
-      var editorContainer = querySelector('#editor-container');
-      var consoleView = querySelector('#console-view');
-      consoleView.removeAttribute('hidden');
-      splitterElements = [editorContainer, consoleView];
-      horizontal = false;
-    } else {
-      var editorContainer = querySelector('#editor-container');
-      var consoleView = querySelector('#console-view');
-      consoleView.removeAttribute('hidden');
-      splitterElements = [editorContainer, consoleView];
-    }
+    if (supportsFlutterWeb) {
+      var webOutput = querySelector('#web-output');
+      var userCodeEditor = querySelector('#user-code-editor');
+      // Make the web output area visible.
+      webOutput.removeAttribute('hidden');
 
-    splitter = flexSplit(
-      splitterElements,
-      horizontal: horizontal,
-      gutterSize: defaultSplitterWidth,
-      // set initial sizes (in percentages)
-      sizes: [initialSplitPercent, (100 - initialSplitPercent)],
-      // set the minimum sizes (in pixels)
-      minSize: [100, 100],
-    );
+      var splitterElements = [userCodeEditor, webOutput];
+
+      splitter = flexSplit(
+        splitterElements,
+        horizontal: true,
+        gutterSize: defaultSplitterWidth,
+        // set initial sizes (in percentages)
+        sizes: [initialSplitPercent, (100 - initialSplitPercent)],
+        // set the minimum sizes (in pixels)
+        minSize: [100, 100],
+      );
+    }
 
     if (gistId.isNotEmpty) {
       _loadAndShowGist(gistId, analyze: false);
@@ -424,14 +322,11 @@ class NewEmbed {
     final GistLoader loader = deps[GistLoader];
     final gist = await loader.loadGist(id);
     context.dartSource = gist.getFile('main.dart')?.content ?? '';
-    context.htmlSource = gist.getFile('index.html')?.content ?? '';
-    context.cssSource = gist.getFile('styles.css')?.content ?? '';
     context.testMethod = gist.getFile('test.dart')?.content ?? '';
     context.solution = gist.getFile('solution.dart')?.content ?? '';
     context.hint = gist.getFile('hint.txt')?.content ?? '';
-    tabController.setTabVisibility(
-        'test', context.testMethod.isNotEmpty && _showTestCode);
-    showHintButton?.hidden = context.hint.isEmpty && context.testMethod.isEmpty;
+    tabController.setTabVisibility('test', context.testMethod.isNotEmpty);
+    showHintButton.hidden = context.hint.isEmpty && context.testMethod.isEmpty;
     editorIsBusy = false;
 
     if (analyze) {
@@ -447,13 +342,15 @@ class NewEmbed {
     editorIsBusy = true;
     testResultBox.hide();
     hintBox.hide();
-    consoleExpandController.clear();
+    consoleTabView.clear();
+    unreadConsoleCounter.clear();
 
     final fullCode = '${context.dartSource}\n${context.testMethod}\n'
         '${executionSvc.testResultDecoration}';
 
     var input = CompileRequest()..source = fullCode;
-    if (options.mode == NewEmbedMode.flutter) {
+
+    if (supportsFlutterWeb) {
       dartServices
           .compileDDC(input)
           .timeout(longServiceCallTimeout)
@@ -465,26 +362,10 @@ class NewEmbed {
           modulesBaseUrl: response.modulesBaseUrl,
         );
       }).catchError((e, st) {
-        consoleExpandController
-            .appendError('Error compiling to JavaScript:\n$e');
+        consoleTabView.appendError('Error compiling to JavaScript:\n$e');
         print(st);
+        tabController.selectTab('console');
       }).whenComplete(() {
-        webOutputLabel.setAttr('hidden');
-        editorIsBusy = false;
-      });
-    } else if (options.mode == NewEmbedMode.html) {
-      dartServices
-          .compile(input)
-          .timeout(longServiceCallTimeout)
-          .then((CompileResponse response) {
-        return executionSvc.execute(
-            context.htmlSource, context.cssSource, response.result);
-      }).catchError((e, st) {
-        consoleExpandController
-            .appendError('Error compiling to JavaScript:\n$e');
-        print(st);
-      }).whenComplete(() {
-        webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
       });
     } else {
@@ -494,9 +375,9 @@ class NewEmbed {
           .then((CompileResponse response) {
         executionSvc.execute('', '', response.result);
       }).catchError((e, st) {
-        consoleExpandController
-            .appendError('Error compiling to JavaScript:\n$e');
+        consoleTabView.appendError('Error compiling to JavaScript:\n$e');
         print(st);
+        tabController.selectTab('console');
       }).whenComplete(() {
         editorIsBusy = false;
       });
@@ -574,7 +455,7 @@ class NewEmbed {
     try {
       formatButton.disabled = true;
       FormatResponse result =
-          await dartServices.format(input).timeout(serviceCallTimeout);
+      await dartServices.format(input).timeout(serviceCallTimeout);
 
       formatButton.disabled = false;
 
@@ -596,6 +477,11 @@ class NewEmbed {
     if (userCodeEditor.hasFocus && e.keyCode == KeyCode.PERIOD) {
       userCodeEditor.showCompletions(autoInvoked: true);
     }
+  }
+
+  bool get supportsFlutterWeb {
+    final url = Uri.parse(window.location.toString());
+    return url.queryParameters['fw'] == 'true';
   }
 
   bool get isDarkMode {
@@ -630,9 +516,9 @@ class NewEmbed {
   }
 }
 
-// material-components-web uses specific classes for its navigation styling,
-// rather than an attribute. This class extends the tab controller code to also
-// toggle that class.
+// Primer uses a class called "selected" for its navigation styling, rather than
+// an attribute. This class extends the tab controller code to also toggle that
+// class.
 class NewEmbedTabController extends TabController {
   /// This method will throw if the tabName is not the name of a current tab.
   @override
@@ -640,19 +526,15 @@ class NewEmbedTabController extends TabController {
     TabElement tab = tabs.firstWhere((t) => t.name == tabName);
 
     for (TabElement t in tabs) {
-      t.toggleClass('mdc-tab--active', t == tab);
-      DElement(t.element.querySelector('.mdc-tab-indicator'))
-          .toggleClass('mdc-tab-indicator--active', t == tab);
-      t.toggleAttr('aria-selected', t == tab);
+      t.toggleClass('selected', t == tab);
     }
 
     super.selectTab(tabName);
   }
 
   void setTabVisibility(String tabName, bool visible) {
-    tabs
-        .firstWhere((t) => t.name == tabName, orElse: () => null)
-        ?.toggleAttr('hidden', !visible);
+    TabElement tab = tabs.firstWhere((t) => t.name == tabName);
+    tab.toggleAttr('hidden', !visible);
   }
 }
 
@@ -668,6 +550,26 @@ class TabView {
     } else {
       element.setAttr('hidden');
     }
+  }
+}
+
+class ConsoleTabView extends TabView {
+  ConsoleTabView(DElement element) : super(element);
+
+  void clear() {
+    element.text = '';
+  }
+
+  void appendMessage(String msg) {
+    final line = DivElement()..text = filterCloudUrls(msg);
+    element.add(line);
+  }
+
+  void appendError(String err) {
+    final line = DivElement()
+      ..text = filterCloudUrls(err)
+      ..classes.add('text-red');
+    element.add(line);
   }
 }
 
@@ -817,7 +719,7 @@ class AnalysisResultsController {
   bool _flashHidden = true;
 
   final StreamController<AnalysisIssue> _onClickController =
-      StreamController.broadcast();
+  StreamController.broadcast();
 
   Stream<AnalysisIssue> get onIssueClick => _onClickController.stream;
 
@@ -902,130 +804,12 @@ class AnalysisResultsController {
   }
 }
 
-/// Manages the visibility and contents of the console
-class ConsoleController {
-  final DElement console;
-  ConsoleController(Element console) : console = DElement(console) {
-    console.removeAttribute('hidden');
-  }
-
-  void appendError(String error) {
-    if (error == null) {
-      return;
-    }
-
-    var line = DivElement()
-      ..text = filterCloudUrls(error)
-      ..classes.add('text-red');
-    console.add(line);
-  }
-
-  void appendMessage(String message) {
-    if (message == null) {
-      return;
-    }
-    var line = DivElement()..text = filterCloudUrls(message);
-    console.add(line);
-  }
-
-  void clear() {
-    console.text = '';
-  }
-}
-
-class ConsoleExpandController extends ConsoleController {
-  final DElement expandButton;
-  final DElement footer;
-  final DElement expandIcon;
-  final Counter unreadCounter;
-  Splitter _splitter;
-  bool _expanded;
-
-  ConsoleExpandController({
-    Element expandButton,
-    Element footer,
-    Element expandIcon,
-    Element consoleElement,
-    this.unreadCounter,
-  })  : expandButton = DElement(expandButton),
-        footer = DElement(footer),
-        expandIcon = DElement(expandIcon),
-        _expanded = false,
-        super(consoleElement) {
-    super.console.setAttr('hidden');
-    footer.removeAttribute('hidden');
-    expandButton.onClick.listen((_) => _toggleExpanded());
-  }
-
-  void appendError(String error) {
-    super.appendError(error);
-    if (!_expanded && error != null) {
-      unreadCounter.increment();
-    }
-  }
-
-  void appendMessage(String message) {
-    super.appendMessage(message);
-    if (!_expanded && message != null) {
-      unreadCounter.increment();
-    }
-  }
-
-  void clear() {
-    super.clear();
-    unreadCounter.clear();
-  }
-
-  void _toggleExpanded() {
-    _expanded = !_expanded;
-    if (_expanded) {
-      _initSplitter();
-      _splitter.setSizes([60, 40]);
-      console.element.removeAttribute('hidden');
-      expandIcon.element.classes.remove('octicon-triangle-up');
-      expandIcon.element.classes.add('octicon-triangle-down');
-      footer.toggleClass('footer-top-border', false);
-      unreadCounter.clear();
-    } else {
-      _splitter.setSizes([100, 0]);
-      console.element.setAttribute('hidden', 'true');
-      expandIcon.element.classes.remove('octicon-triangle-down');
-      expandIcon.element.classes.add('octicon-triangle-up');
-      footer.toggleClass('footer-top-border', true);
-      try {
-        _splitter.destroy();
-      } on NoSuchMethodError {
-        // dart2js throws NoSuchMethodError (dartdevc is ok)
-        // TODO(ryjohn): why does this happen?
-      }
-    }
-  }
-
-  void _initSplitter() {
-    var splitterElements = [
-      querySelector('#editor-container'),
-      querySelector('#console-output-footer'),
-    ];
-    _splitter = flexSplit(
-      splitterElements,
-      horizontal: false,
-      gutterSize: defaultSplitterWidth,
-      sizes: [60, 40],
-      minSize: [200, 32],
-    );
-  }
-}
-
 class NewEmbedContext {
   final Editor userCodeEditor;
-  final Editor htmlEditor;
-  final Editor cssEditor;
   final Editor testEditor;
   final Editor solutionEditor;
 
   Document _dartDoc;
-  Document _htmlDoc;
-  Document _cssDoc;
 
   String hint = '';
 
@@ -1048,11 +832,8 @@ class NewEmbedContext {
 
   final _dartReconcileController = StreamController.broadcast();
 
-  NewEmbedContext(this.userCodeEditor, this.testEditor, this.solutionEditor,
-      this.htmlEditor, this.cssEditor) {
+  NewEmbedContext(this.userCodeEditor, this.testEditor, this.solutionEditor) {
     _dartDoc = userCodeEditor.document;
-    _htmlDoc = htmlEditor?.document;
-    _cssDoc = cssEditor?.document;
     _dartDoc.onChange.listen((_) => _dartDirtyController.add(null));
     _createReconciler(_dartDoc, _dartReconcileController, 1250);
   }
@@ -1061,20 +842,8 @@ class NewEmbedContext {
 
   String get dartSource => _dartDoc.value;
 
-  String get htmlSource => _htmlDoc?.value;
-
-  String get cssSource => _cssDoc?.value;
-
   set dartSource(String value) {
     userCodeEditor.document.value = value;
-  }
-
-  set htmlSource(String value) {
-    htmlEditor.document.value = value;
-  }
-
-  set cssSource(String value) {
-    cssEditor.document.value = value;
   }
 
   String get activeMode => userCodeEditor.mode;
@@ -1106,13 +875,13 @@ class NewEmbedContext {
 }
 
 final RegExp _flutterUrlExp =
-    RegExp(r'(https:[a-zA-Z0-9_=%&\/\-\?\.]+flutter_web\.js)(:\d+:\d+)');
+RegExp(r'(https:[a-zA-Z0-9_=%&\/\-\?\.]+flutter_web\.js)(:\d+:\d+)');
 final RegExp _dartUrlExp =
-    RegExp(r'(https:[a-zA-Z0-9_=%&\/\-\?\.]+dart_sdk\.js)(:\d+:\d+)');
+RegExp(r'(https:[a-zA-Z0-9_=%&\/\-\?\.]+dart_sdk\.js)(:\d+:\d+)');
 
 String filterCloudUrls(String trace) {
   return trace
-      ?.replaceAllMapped(
-          _flutterUrlExp, (m) => '[Flutter SDK Source]${m.group(2)}')
-      ?.replaceAllMapped(_dartUrlExp, (m) => '[Dart SDK Source]${m.group(2)}');
+      .replaceAllMapped(
+      _flutterUrlExp, (m) => '[Flutter SDK Source]${m.group(2)}')
+      .replaceAllMapped(_dartUrlExp, (m) => '[Dart SDK Source]${m.group(2)}');
 }
