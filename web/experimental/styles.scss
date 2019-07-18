@@ -1,7 +1,8 @@
-/* Copyright (c) 2019, the Dart project authors.  Please see the AUTHORS file */
-/* for details. All rights reserved. Use of this source code is governed by a */
-/* BSD-style license that can be found in the LICENSE file. */
+// Copyright (c) 2019, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
 
+@import "package:mdc_web_sass/material-components-web";
 @import 'package:dart_pad/experimental/scss/colors';
 
 body {
@@ -12,11 +13,8 @@ body {
   position: absolute;
   overflow: hidden;
   font-size: 14px;
-
-  // Material Design theme
-  --mdc-theme-primary: #168AFD;
-  --mdc-theme-secondary: #676767;
 }
+
 
 .medium-octicon {
   font-size: 19px;
@@ -25,8 +23,6 @@ body {
 // Tab Navigation
 
 #navbar {
-  padding: 2px 8px 0 29px;
-  margin-bottom: 0;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -34,12 +30,7 @@ body {
   flex-wrap: wrap-reverse;
 }
 
-#navbar .tabnav-tabs {
-  padding-left: 12px;
-}
-
 .nav-buttons {
-  padding: 0 0 4px 0;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -58,7 +49,7 @@ body {
   justify-self: end;
 }
 
-/* Code Editor */
+// Code Editor
 
 #user-code-editor {
   flex: 1;
@@ -68,7 +59,7 @@ body {
   max-height: 11em;
 }
 
-/* Console */
+// Console
 
 #console-view {
   font-family: 'Inconsolata', monospace;
@@ -91,8 +82,14 @@ body {
 }
 
 .flash {
-  border-radius: 0.25em;
+  border-radius: 0;
   border: none;
+  padding: 12px;
+}
+
+.flash-close {
+  padding: 6px;
+  margin: -12px;
 }
 
 #flash-container {
@@ -108,6 +105,11 @@ body {
   padding-right: 22px;
   max-height: 120px;
   overflow-y: auto;
+  font-family: Roboto Light, sans-serif;
+  font-weight: 300;
+  a {
+    font-weight: bold;
+  }
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -183,6 +185,7 @@ body {
 }
 
 // Console Output Footer
+
 .console-output-header {
   display: flex;
   flex-direction: row;
@@ -199,8 +202,8 @@ body {
 
 #console-expand-button {
   color: $label-color;
-  margin: 0;
-  padding: 2px;
+  padding: 8px;
+  margin: -4px;
 }
 
 #console-expand-button:focus {
@@ -218,7 +221,9 @@ body {
 #editor-and-console-container {
   display: flex;
   flex-direction: column;
+  overflow-x: scroll;
 }
+
 #editor-container {
   flex: 1;
   overflow: auto;
@@ -266,7 +271,7 @@ body {
 #issues {
   padding: 8px;
   overflow-y: auto;
-  border-radius: 0.25em;
+  max-height: 50vh;
 }
 
 #issues .issue {
@@ -315,8 +320,30 @@ body {
 }
 
 // Material Design
+#progress-bar {
+  position: absolute;
+}
+
 #menu-button {
   color: $secondary-color;
+}
+
+#main-menu {
+  width: 192px;
+}
+
+.mdc-tab__content {
+  text-transform: none !important;
+}
+
+.mdc-tab--active {
+  .mdc-tab__text-label {
+    font-weight: normal;
+  }
+}
+
+.mdc-button {
+  text-transform: none !important;
 }
 
 // Misc
@@ -325,4 +352,8 @@ body {
   font-family: 'Inconsolata', monospace;
   color: $label-color;
   margin-left: 8px;
+}
+
+.hide {
+  opacity: 0;
 }

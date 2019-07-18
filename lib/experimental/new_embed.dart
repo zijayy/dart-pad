@@ -6,7 +6,9 @@ import 'dart:async';
 import 'dart:html' hide Document;
 import 'dart:math' as math;
 
+import 'package:dart_pad/src/ga.dart';
 import 'package:split/split.dart';
+import 'package:mdc_web/mdc_web.dart';
 
 import '../completion.dart';
 import '../core/dependencies.dart';
@@ -37,6 +39,7 @@ enum NewEmbedMode { dart, flutter, html, inline }
 
 class NewEmbedOptions {
   final NewEmbedMode mode;
+
   NewEmbedOptions(this.mode);
 }
 
@@ -58,9 +61,10 @@ class NewEmbed {
   TabView htmlTabView;
   TabView cssTabView;
   DElement solutionTab;
+  MDCMenu menu;
 
   DElement morePopover;
-  DInput showTestCodeCheckbox;
+  DElement showTestCodeCheckmark;
   bool _showTestCode = false;
 
   Counter unreadConsoleCounter;
@@ -86,6 +90,8 @@ class NewEmbed {
   ConsoleController consoleExpandController;
   DElement webOutputLabel;
 
+  MDCLinearProgress linearProgress;
+
   final DelayedTimer _debounceTimer = DelayedTimer(
     minDelay: Duration(milliseconds: 1000),
     maxDelay: Duration(milliseconds: 5000),
@@ -99,7 +105,11 @@ class NewEmbed {
   /// too busy to handle code changes, execute/reset requests, etc.
   set editorIsBusy(bool value) {
     _editorIsBusy = value;
-    navBarElement.toggleClass('busy', value);
+    if (value) {
+      linearProgress.root.classes.remove('hide');
+    } else {
+      linearProgress.root.classes.add('hide');
+    }
     userCodeEditor.readOnly = value;
     executeButton.disabled = value;
     formatButton.disabled = value;
@@ -109,9 +119,10 @@ class NewEmbed {
 
   NewEmbed(this.options) {
     _initHostListener();
-    tabController = NewEmbedTabController();
+    tabController =
+        NewEmbedTabController(MDCTabBar(querySelector('.mdc-tab-bar')));
 
-    var tabNames = ['editor', 'test', 'solution'];
+    var tabNames = ['editor', 'solution', 'test'];
     if (options.mode == NewEmbedMode.html) {
       tabNames = ['editor', 'html', 'css'];
     }
@@ -177,16 +188,21 @@ class NewEmbed {
     }
 
     tabController.setTabVisibility('test', false);
-    showTestCodeCheckbox = DInput(querySelector('#show-test-checkbox'));
-    showTestCodeCheckbox.onClick.listen((e) {
-      _showTestCode = !_showTestCode;
-      tabController.setTabVisibility('test', _showTestCode);
-    });
+    showTestCodeCheckmark = DElement(querySelector('#show-test-checkmark'));
 
     morePopover = DElement(querySelector('#more-popover'));
     menuButton = DisableableButton(querySelector('#menu-button'), () {
-      var popoverHidden = morePopover.hasAttr('hidden');
-      morePopover.toggleAttr('hidden', !popoverHidden);
+      menu.open = !menu.open;
+    });
+    menu = MDCMenu(querySelector('#main-menu'))
+      ..setAnchorCorner(AnchorCorner.bottomLeft)
+      ..setAnchorElement(menuButton._element.element);
+    menu.listen('MDCMenu:selected', (e) {
+      if ((e as CustomEvent).detail['index'] == 0) {
+        _showTestCode = !_showTestCode;
+        showTestCodeCheckmark.toggleClass('hide', !_showTestCode);
+        tabController.setTabVisibility('test', _showTestCode);
+      }
     });
 
     formatButton = DisableableButton(
@@ -270,12 +286,15 @@ class NewEmbed {
 
     executionSvc.testResults.listen((result) {
       if (result.messages.isEmpty) {
-        result.messages.add(result.success ? 'All tests passed!' : 'Test failed.');
+        result.messages
+            .add(result.success ? 'All tests passed!' : 'Test failed.');
       }
       testResultBox.showStrings(
         result.messages,
         result.success ? FlashBoxStyle.success : FlashBoxStyle.warn,
       );
+      ga?.sendEvent(
+          'execution', (result.success) ? 'test-success' : 'test-failure');
     });
 
     analysisResultsController = AnalysisResultsController(
@@ -304,6 +323,10 @@ class NewEmbed {
       webOutputLabel = DElement(webOutputLabelElement);
     }
 
+    linearProgress = MDCLinearProgress(querySelector('#progress-bar'));
+    linearProgress.determinate = false;
+
+    _initializeMaterialRipples();
     _initModules().then((_) => _initNewEmbed()).then((_) => _emitReady());
   }
 
@@ -358,6 +381,7 @@ class NewEmbed {
 
   void _initNewEmbed() {
     deps[GistLoader] = GistLoader.defaultFilters();
+    deps[Analytics] = Analytics();
 
     context = NewEmbedContext(
         userCodeEditor, testEditor, solutionEditor, htmlEditor, cssEditor);
@@ -444,6 +468,8 @@ class NewEmbed {
       return;
     }
 
+    ga?.sendEvent('execution', 'initiated');
+
     editorIsBusy = true;
     testResultBox.hide();
     hintBox.hide();
@@ -464,10 +490,12 @@ class NewEmbed {
           response.result,
           modulesBaseUrl: response.modulesBaseUrl,
         );
+        ga?.sendEvent('execution', 'ddc-compile-success');
       }).catchError((e, st) {
         consoleExpandController
             .appendError('Error compiling to JavaScript:\n$e');
         print(st);
+        ga?.sendEvent('execution', 'ddc-compile-failure');
       }).whenComplete(() {
         webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
@@ -477,12 +505,14 @@ class NewEmbed {
           .compile(input)
           .timeout(longServiceCallTimeout)
           .then((CompileResponse response) {
+        ga?.sendEvent('execution', 'html-compile-success');
         return executionSvc.execute(
             context.htmlSource, context.cssSource, response.result);
       }).catchError((e, st) {
         consoleExpandController
             .appendError('Error compiling to JavaScript:\n$e');
         print(st);
+        ga?.sendEvent('execution', 'html-compile-failure');
       }).whenComplete(() {
         webOutputLabel.setAttr('hidden');
         editorIsBusy = false;
@@ -493,10 +523,12 @@ class NewEmbed {
           .timeout(longServiceCallTimeout)
           .then((CompileResponse response) {
         executionSvc.execute('', '', response.result);
+        ga?.sendEvent('execution', 'compile-success');
       }).catchError((e, st) {
         consoleExpandController
             .appendError('Error compiling to JavaScript:\n$e');
         print(st);
+        ga?.sendEvent('execution', 'compile-failure');
       }).whenComplete(() {
         editorIsBusy = false;
       });
@@ -628,21 +660,32 @@ class NewEmbed {
 
     if (focus) userCodeEditor.focus();
   }
+
+  void _initializeMaterialRipples() {
+    MDCRipple(executeButton._element.element);
+    MDCRipple(reloadGistButton._element.element);
+    MDCRipple(formatButton._element.element);
+    MDCRipple(showHintButton._element.element);
+  }
 }
 
 // material-components-web uses specific classes for its navigation styling,
 // rather than an attribute. This class extends the tab controller code to also
 // toggle that class.
 class NewEmbedTabController extends TabController {
+  final MDCTabBar _tabBar;
+
+  NewEmbedTabController(this._tabBar);
+
   /// This method will throw if the tabName is not the name of a current tab.
   @override
   void selectTab(String tabName) {
-    TabElement tab = tabs.firstWhere((t) => t.name == tabName);
+    var tab = tabs.firstWhere((t) => t.name == tabName);
+    var idx = tabs.indexOf(tab);
 
-    for (TabElement t in tabs) {
-      t.toggleClass('mdc-tab--active', t == tab);
-      DElement(t.element.querySelector('.mdc-tab-indicator'))
-          .toggleClass('mdc-tab-indicator--active', t == tab);
+    _tabBar.activateTab(idx);
+
+    for (var t in tabs) {
       t.toggleAttr('aria-selected', t == tab);
     }
 
@@ -814,7 +857,7 @@ class AnalysisResultsController {
   DElement flash;
   DElement message;
   DElement toggle;
-  bool _flashHidden = true;
+  bool _flashHidden;
 
   final StreamController<AnalysisIssue> _onClickController =
       StreamController.broadcast();
@@ -822,8 +865,15 @@ class AnalysisResultsController {
   Stream<AnalysisIssue> get onIssueClick => _onClickController.stream;
 
   AnalysisResultsController(this.flash, this.message, this.toggle) {
-    hideFlash();
+    // Show issues by default, but hide the flash element (otherwise an empty
+    // flash container will be shown). display() will un-hide the element when
+    // there are issues to display.
+    _flashHidden = false;
+    flash.setAttr('hidden');
+    toggle.text = _hideMsg;
+
     message.text = _noIssuesMsg;
+    MDCRipple(toggle.element);
     toggle.onClick.listen((_) {
       if (_flashHidden) {
         showFlash();
@@ -905,6 +955,7 @@ class AnalysisResultsController {
 /// Manages the visibility and contents of the console
 class ConsoleController {
   final DElement console;
+
   ConsoleController(Element console) : console = DElement(console) {
     console.removeAttribute('hidden');
   }
