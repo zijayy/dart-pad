@@ -3,9 +3,10 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:html' hide Document;
+import 'dart:html' hide Document, Console;
 import 'dart:math' as math;
 
+import 'package:dart_pad/experimental/material_tab_controller.dart';
 import 'package:dart_pad/src/ga.dart';
 import 'package:split/split.dart';
 import 'package:mdc_web/mdc_web.dart';
@@ -24,8 +25,11 @@ import '../services/dartservices.dart';
 import '../services/execution_iframe.dart';
 import '../sharing/gists.dart';
 import '../src/util.dart';
+import 'console.dart';
+import 'counter.dart';
+import 'dialog.dart';
 
-const int defaultSplitterWidth = 10;
+const int defaultSplitterWidth = 6;
 
 NewEmbed get newEmbed => _newEmbed;
 
@@ -67,6 +71,8 @@ class NewEmbedOptions {
 /// snippet against a desired result.
 class NewEmbed {
   final NewEmbedOptions options;
+
+  var _executionButtonCount = 0;
   DisableableButton executeButton;
   DisableableButton reloadGistButton;
   DisableableButton formatButton;
@@ -107,7 +113,7 @@ class NewEmbed {
   Splitter splitter;
   AnalysisResultsController analysisResultsController;
 
-  ConsoleController consoleExpandController;
+  Console consoleExpandController;
   DElement webOutputLabel;
 
   MDCLinearProgress linearProgress;
@@ -189,8 +195,8 @@ class NewEmbed {
         DisableableButton(querySelector('#execute'), _handleExecute);
 
     reloadGistButton = DisableableButton(querySelector('#reload-gist'), () {
-      if (gistId.isNotEmpty) {
-        _loadAndShowGist(gistId);
+      if (gistId.isNotEmpty || sampleId.isNotEmpty) {
+        _loadAndShowGist();
       } else {
         _resetCode();
       }
@@ -205,6 +211,7 @@ class NewEmbed {
         tabController.selectTab('solution', force: true);
       });
       hintBox.showElements([hintElement, showSolutionButton]);
+      ga?.sendEvent('view', 'hint');
     })
       ..hidden = true;
 
@@ -303,11 +310,11 @@ class NewEmbed {
           isDarkMode ? '../scripts/frame_dark.html' : '../scripts/frame.html';
 
     executionSvc.onStderr.listen((err) {
-      consoleExpandController.appendError(err);
+      consoleExpandController.showOutput(err, error: true);
     });
 
     executionSvc.onStdout.listen((msg) {
-      consoleExpandController.appendMessage(msg);
+      consoleExpandController.showOutput(msg);
     });
 
     executionSvc.testResults.listen((result) {
@@ -334,7 +341,7 @@ class NewEmbed {
     if (options.mode == NewEmbedMode.flutter ||
         options.mode == NewEmbedMode.html) {
       consoleExpandController = ConsoleExpandController(
-          expandButton: querySelector('#console-expand-button'),
+          expandButton: querySelector('#console-output-header'),
           footer: querySelector('#console-output-footer'),
           expandIcon: querySelector('#console-expand-icon'),
           unreadCounter: unreadConsoleCounter,
@@ -348,7 +355,7 @@ class NewEmbed {
           });
     } else {
       consoleExpandController =
-          ConsoleController(querySelector('#console-output-container'));
+          Console(DElement(querySelector('#console-output-container')));
     }
 
     var webOutputLabelElement = querySelector('#web-output-label');
@@ -395,12 +402,22 @@ class NewEmbed {
   }
 
   String get gistId {
-    Uri url = Uri.parse(window.location.toString());
+    final url = Uri.parse(window.location.toString());
 
     if (url.hasQuery &&
         url.queryParameters['id'] != null &&
         isLegalGistId(url.queryParameters['id'])) {
       return url.queryParameters['id'];
+    }
+
+    return '';
+  }
+
+  String get sampleId {
+    final url = Uri.parse(window.location.toString());
+
+    if (url.hasQuery && url.queryParameters['sample_id'] != null) {
+      return url.queryParameters['sample_id'];
     }
 
     return '';
@@ -462,7 +479,7 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
 
     var horizontal = true;
     var webOutput = querySelector('#web-output');
-    List splitterElements;
+    List<Element> splitterElements;
     if (options.mode == NewEmbedMode.flutter ||
         options.mode == NewEmbedMode.html) {
       var editorAndConsoleContainer =
@@ -491,21 +508,29 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
       minSize: [100, 100],
     );
 
-    if (gistId.isNotEmpty) {
-      _loadAndShowGist(gistId, analyze: false);
+    if (gistId.isNotEmpty || sampleId.isNotEmpty) {
+      _loadAndShowGist(analyze: false);
     }
 
     // set enabled/disabled state of various buttons
     editorIsBusy = false;
   }
 
-  Future<void> _loadAndShowGist(String id, {bool analyze = true}) async {
+  Future<void> _loadAndShowGist({bool analyze = true}) async {
+    if (gistId.isEmpty && sampleId.isEmpty) {
+      print('Cannot load gist: neither id nor sample_id is present.');
+      return;
+    }
+
     editorIsBusy = true;
 
     final GistLoader loader = deps[GistLoader];
 
     try {
-      final gist = await loader.loadGist(id);
+      final gist = gistId.isNotEmpty
+          ? await loader.loadGist(gistId)
+          : await loader.loadGistFromAPIDocs(sampleId);
+
       setContextSources(<String, String>{
         'main.dart': gist.getFile('main.dart')?.content ?? '',
         'index.html': gist.getFile('index.html')?.content ?? '',
@@ -557,6 +582,7 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
     context.hint = sources['hint.txt'] ?? '';
     tabController.setTabVisibility(
         'test', context.testMethod.isNotEmpty && _showTestCode);
+    menuButton.hidden = context.testMethod.isEmpty;
     showHintButton?.hidden = context.hint.isEmpty;
     solutionTab?.toggleAttr('hidden', context.solution.isEmpty);
     editorIsBusy = false;
@@ -575,7 +601,8 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
       return;
     }
 
-    ga?.sendEvent('execution', 'initiated');
+    _executionButtonCount++;
+    ga?.sendEvent('execution', 'initiated', label: '$_executionButtonCount');
 
     editorIsBusy = true;
     testResultBox.hide();
@@ -599,8 +626,8 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
         );
         ga?.sendEvent('execution', 'ddc-compile-success');
       }).catchError((e, st) {
-        consoleExpandController
-            .appendError('Error compiling to JavaScript:\n$e');
+        consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
+            error: true);
         print(st);
         ga?.sendEvent('execution', 'ddc-compile-failure');
       }).whenComplete(() {
@@ -616,8 +643,8 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
         return executionSvc.execute(
             context.htmlSource, context.cssSource, response.result);
       }).catchError((e, st) {
-        consoleExpandController
-            .appendError('Error compiling to JavaScript:\n$e');
+        consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
+            error: true);
         print(st);
         ga?.sendEvent('execution', 'html-compile-failure');
       }).whenComplete(() {
@@ -632,8 +659,8 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
         executionSvc.execute('', '', response.result);
         ga?.sendEvent('execution', 'compile-success');
       }).catchError((e, st) {
-        consoleExpandController
-            .appendError('Error compiling to JavaScript:\n$e');
+        consoleExpandController.showOutput('Error compiling to JavaScript:\n$e',
+            error: true);
         print(st);
         ga?.sendEvent('execution', 'compile-failure');
       }).whenComplete(() {
@@ -779,12 +806,11 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
 // material-components-web uses specific classes for its navigation styling,
 // rather than an attribute. This class extends the tab controller code to also
 // toggle that class.
-class NewEmbedTabController extends TabController {
-  final MDCTabBar _tabBar;
+class NewEmbedTabController extends MaterialTabController {
   final Dialog _dialog;
   bool _userHasSeenSolution = false;
 
-  NewEmbedTabController(this._tabBar, this._dialog);
+  NewEmbedTabController(MDCTabBar tabBar, this._dialog) : super(tabBar);
 
   void registerTab(TabElement tab) {
     tabs.add(tab);
@@ -816,25 +842,11 @@ class NewEmbedTabController extends TabController {
     }
 
     if (tabName == 'solution') {
+      ga?.sendEvent('view', 'solution');
       _userHasSeenSolution = true;
     }
 
-    var tab = tabs.firstWhere((t) => t.name == tabName);
-    var idx = tabs.indexOf(tab);
-
-    _tabBar.activateTab(idx);
-
-    for (var t in tabs) {
-      t.toggleAttr('aria-selected', t == tab);
-    }
-
-    super.selectTab(tabName);
-  }
-
-  void setTabVisibility(String tabName, bool visible) {
-    tabs
-        .firstWhere((t) => t.name == tabName, orElse: () => null)
-        ?.toggleAttr('hidden', !visible);
+    await super.selectTab(tabName);
   }
 }
 
@@ -850,25 +862,6 @@ class TabView {
     } else {
       element.setAttr('hidden');
     }
-  }
-}
-
-class Counter {
-  Counter(this.element);
-
-  final SpanElement element;
-
-  int _itemCount = 0;
-
-  void increment() {
-    _itemCount++;
-    element.text = '$_itemCount';
-    element.attributes.remove('hidden');
-  }
-
-  void clear() {
-    _itemCount = 0;
-    element.setAttribute('hidden', 'true');
   }
 }
 
@@ -1091,39 +1084,7 @@ class AnalysisResultsController {
   }
 }
 
-/// Manages the visibility and contents of the console
-class ConsoleController {
-  final DElement console;
-
-  ConsoleController(Element console) : console = DElement(console) {
-    console.removeAttribute('hidden');
-  }
-
-  void appendError(String error) {
-    if (error == null) {
-      return;
-    }
-
-    var line = DivElement()
-      ..text = filterCloudUrls(error)
-      ..classes.add('text-red');
-    console.add(line);
-  }
-
-  void appendMessage(String message) {
-    if (message == null) {
-      return;
-    }
-    var line = DivElement()..text = filterCloudUrls(message);
-    console.add(line);
-  }
-
-  void clear() {
-    console.text = '';
-  }
-}
-
-class ConsoleExpandController extends ConsoleController {
+class ConsoleExpandController extends Console {
   final DElement expandButton;
   final DElement footer;
   final DElement expandIcon;
@@ -1143,21 +1104,15 @@ class ConsoleExpandController extends ConsoleController {
         footer = DElement(footer),
         expandIcon = DElement(expandIcon),
         _expanded = false,
-        super(consoleElement) {
-    super.console.setAttr('hidden');
+        super(DElement(consoleElement),
+            errorClass: 'text-red', filter: filterCloudUrls) {
+    super.element.setAttr('hidden');
     footer.removeAttribute('hidden');
     expandButton.onClick.listen((_) => _toggleExpanded());
   }
 
-  void appendError(String error) {
-    super.appendError(error);
-    if (!_expanded && error != null) {
-      unreadCounter.increment();
-    }
-  }
-
-  void appendMessage(String message) {
-    super.appendMessage(message);
+  void showOutput(String message, {bool error = false}) {
+    super.showOutput(message, error: error);
     if (!_expanded && message != null) {
       unreadCounter.increment();
     }
@@ -1173,14 +1128,14 @@ class ConsoleExpandController extends ConsoleController {
     if (_expanded) {
       _initSplitter();
       _splitter.setSizes([60, 40]);
-      console.element.removeAttribute('hidden');
+      element.toggleAttr('hidden', false);
       expandIcon.element.classes.remove('octicon-triangle-up');
       expandIcon.element.classes.add('octicon-triangle-down');
       footer.toggleClass('footer-top-border', false);
       unreadCounter.clear();
     } else {
       _splitter.setSizes([100, 0]);
-      console.element.setAttribute('hidden', 'true');
+      element.toggleAttr('hidden', true);
       expandIcon.element.classes.remove('octicon-triangle-down');
       expandIcon.element.classes.add('octicon-triangle-up');
       footer.toggleClass('footer-top-border', true);
@@ -1206,102 +1161,6 @@ class ConsoleExpandController extends ConsoleController {
       sizes: [60, 40],
       minSize: [32, 32],
     );
-  }
-}
-
-enum DialogResult {
-  yes,
-  no,
-  ok,
-  cancel,
-}
-
-class Dialog {
-  final MDCDialog _mdcDialog;
-  final Element _leftButton;
-  final Element _rightButton;
-  final Element _title;
-  final Element _content;
-
-  Dialog()
-      : _mdcDialog = MDCDialog(querySelector('.mdc-dialog')),
-        _leftButton = querySelector('#dialog-left-button'),
-        _rightButton = querySelector('#dialog-right-button'),
-        _title = querySelector('#my-dialog-title'),
-        _content = querySelector('#my-dialog-content');
-
-  Future<DialogResult> showYesNo(String title, String htmlMessage,
-      {String yesText = "Yes", String noText = "No"}) {
-    return _setUpAndDisplay(
-      title,
-      htmlMessage,
-      noText,
-      yesText,
-      DialogResult.no,
-      DialogResult.yes,
-    );
-  }
-
-  Future<DialogResult> showOk(String title, String htmlMessage) {
-    return _setUpAndDisplay(
-      title,
-      htmlMessage,
-      '',
-      "OK",
-      DialogResult.cancel,
-      DialogResult.ok,
-      false,
-    );
-  }
-
-  Future<DialogResult> showOkCancel(String title, String htmlMessage) {
-    return _setUpAndDisplay(
-      title,
-      htmlMessage,
-      'Cancel',
-      'OK',
-      DialogResult.cancel,
-      DialogResult.ok,
-    );
-  }
-
-  Future<DialogResult> _setUpAndDisplay(
-      String title,
-      String htmlMessage,
-      String leftButtonText,
-      String rightButtonText,
-      DialogResult leftButtonResult,
-      DialogResult rightButtonResult,
-      [bool showLeftButton = true]) {
-    _title.text = title;
-    _content.setInnerHtml(htmlMessage, validator: PermissiveNodeValidator());
-    _rightButton.text = rightButtonText;
-
-    final completer = Completer<DialogResult>();
-    StreamSubscription leftSub;
-
-    if (showLeftButton) {
-      _leftButton.text = leftButtonText;
-      _leftButton.removeAttribute('hidden');
-      leftSub = _leftButton.onClick.listen((_) {
-        completer.complete(leftButtonResult);
-      });
-    } else {
-      _leftButton.setAttribute('hidden', 'true');
-    }
-
-    final rightSub = _rightButton.onClick.listen((_) {
-      completer.complete(rightButtonResult);
-    });
-
-    _mdcDialog.open();
-
-    return completer.future.then((v) {
-      leftSub?.cancel();
-      rightSub.cancel();
-      _mdcDialog.close();
-      return v;
-    });
   }
 }
 

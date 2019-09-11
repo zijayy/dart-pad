@@ -6,7 +6,7 @@ environment:
   sdk: '>=2.2.0 <3.0.0'
 
 dependencies:
-  _discoveryapis_commons: '>=0.1.0 <0.2.0'
+  _discoveryapis_commons: '>=0.1.0 <0.1.9'
 #  codemirror: ^0.5.0+5.43.0
   codemirror: 0.5.9-alpha+5.48.2-pre
   # TODO(jcollins-g): return to haikunator pub package after it is
@@ -22,10 +22,14 @@ dependencies:
   primer_css: ^0.0.1
   route_hierarchical:
     path: third_party/pkg/route.dart/
-  split: ^0.0.2
+  split: ^0.0.6
   html_unescape: ^1.0.0
   sass_builder: ^2.1.0
-  mdc_web: ^0.4.1
+  mdc_web:
+    # https://github.com/jifalops/mdc_web/issues/8
+    git:
+      url: git://github.com/jifalops/mdc_web.git
+      ref: 0ac7d5b4386863d91ec397600a326e622031513f
 dev_dependencies:
   build_runner: any
   build_test: any

@@ -10,6 +10,12 @@ $squiggle-error-color: #F7977A;
 $squiggle-warning-color: #FFF79A;
 $squiggle-info-color: #7EA7D8;
 
+// Playground
+$playground-background-color: #1c2834;
+$playground-text-color: #fff;
+$playground-link-color: #ccc;
+$playground-footer-background-color: #27323a;
+
 $light-text-color: #808080;
 $light-code-background-color: white;
 $light-busy-background-color: rgba(255, 255, 255, .5);
@@ -24,17 +30,18 @@ $light-flash-warning-color: #fff8e7;
 $light-flash-error-color: #ffe7f8;
 
 $dark-text-color: #9e9e9e;
-$dark-code-background-color: #13202e;
+$dark-code-background-color: $playground-background-color;
 $dark-busy-background-color: rgba(27, 29, 33, .8);
 $dark-secondary-background-color: $dark-code-background-color;
 $dark-gutter-background-color: #121a25;
 $dark-border-color: $dark-gutter-background-color;
 $dark-issues-background-color: lighten($dark-code-background-color, 10%);
 $dark-issue-label-color: $dark-text-color;
-$dark-flash-info-color: #46535a;
-$dark-flash-success-color: #425a53;
-$dark-flash-warning-color: #5a534a;
-$dark-flash-error-color: #695b62;
+$dark-flash-text-color: #e6e6e6;
+$dark-flash-info-color: #2f3a41;
+$dark-flash-success-color: #2b413a;
+$dark-flash-warning-color: #413a31;
+$dark-flash-error-color: #41333a;
 
 // V2 Colors
 $button-color: #168AFD;

@@ -107,7 +107,7 @@ BSD-style license that can be found in the LICENSE file. -->
             Run
         </button>
         <div class="position-relative text-right pr-2">
-            <button id="menu-button" class="mdc-icon-button material-icons">more_vert</button>
+            <button id="menu-button" class="mdc-icon-button material-icons" hidden>more_vert</button>
             <div id="main-menu" class="mdc-menu mdc-menu-surface">
                 <ul class="mdc-list" role="menu" aria-hidden="true" aria-orientation="vertical" tabindex="-1">
                     <li id="show-test-menu-item" class="mdc-list-item" role="menuitem">
@@ -135,13 +135,11 @@ BSD-style license that can be found in the LICENSE file. -->
             </div>
         </div>
         <div id="console-output-footer" class="footer-top-border" hidden>
-            <div class="console-output-header">
+            <div id="console-output-header">
                 <span class="view-label">
                     Console <span id="unread-console-counter" class="Counter" hidden></span>
                 </span>
-                <button id="console-expand-button" class="flash-close">
-                    <div id="console-expand-icon" class="octicon octicon-triangle-up"></div>
-                </button>
+                <div id="console-expand-icon" class="octicon octicon-triangle-up"></div>
             </div>
             <div id="console-output-container" class="custom-scrollbar" hidden></div>
         </div>
