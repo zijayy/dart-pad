@@ -6,6 +6,7 @@
 library dart_pad.gists_test;
 
 import 'package:dart_pad/sharing/gists.dart';
+import 'package:dart_pad/sharing/gist_storage.dart';
 import 'package:test/test.dart';
 
 void main() => defineTests();
@@ -115,7 +116,7 @@ void defineTests() {
   group('GistStorage', () {
     test('store', () {
       GistStorage storage = GistStorage();
-      storage.setStoredGist(createSampleGist());
+      storage.setStoredGist(createSampleDartGist());
       expect(storage.hasStoredGist, true);
       expect(storage.getStoredGist(), isNotNull);
       expect(storage.storedId, null);
@@ -123,7 +124,7 @@ void defineTests() {
 
     test('clear', () {
       GistStorage storage = GistStorage();
-      storage.setStoredGist(createSampleGist());
+      storage.setStoredGist(createSampleDartGist());
       expect(storage.hasStoredGist, true);
       storage.clearStoredGist();
       expect(storage.hasStoredGist, false);

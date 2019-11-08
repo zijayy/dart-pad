@@ -56,6 +56,7 @@ body {
 #user-code-editor, #solution-editor, #test-editor, #html-editor, #solution-editor {
   flex: 1;
   width: 100%;
+  margin-right: 8px;
 }
 
 .CodeMirror-hints {
@@ -72,6 +73,10 @@ body {
   white-space: pre-wrap;
   display: flex;
   flex-direction: column;
+}
+
+#flash-container .custom-scrollbar {
+  margin-right: 20px;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -185,12 +190,36 @@ body {
 #editor-and-console-container {
   display: flex;
   flex-direction: column;
-  overflow-x: scroll;
+  position: relative;
+}
+
+.editor-button-group {
+  position: absolute;
+  right: 0;
+  top: 0;
+  // Set z-index below material dropdown but above the editor
+  z-index: 2;
+  margin-right: 20px;
+  margin-top: 4px;
+}
+
+#copy-code, #open-in-dartpad {
+  font-size: 18px;
+  color: $mdc-theme-primary;
 }
 
 #editor-container {
   flex: 1;
   overflow: hidden;
+  position: relative;
+
+  &:hover + #copy-code {
+    display: block;
+  }
+
+  &:hover > #copy-code {
+    display: block;
+  }
 }
 
 #tab-container {
@@ -229,7 +258,23 @@ body {
 }
 
 #main-menu {
-  width: 192px;
+  width: 204px;
+
+  .mdc-list-item {
+    height: 40px;
+
+    .mdc-list-item__graphic {
+      margin-right: 8px;
+
+      .mdc-select__icon {
+        font-size: 16px;
+      }
+    }
+
+    .mdc-list-item__text {
+      font-size: 14px;
+    }
+  }
 }
 
 .mdc-tab__content {

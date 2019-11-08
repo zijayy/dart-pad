@@ -61,7 +61,7 @@ BSD-style license that can be found in the LICENSE file. -->
             <div class="mdc-tab-scroller">
                 <div class="mdc-tab-scroller__scroll-area">
                     <div class="mdc-tab-scroller__scroll-content">
-                        <button id="editor-tab" class="mdc-tab mdc-tab--active" role="tab" aria-selected="true"
+                        <button id="editor-tab" class="mdc-tab mdc-tab--active" role="tab" aria-selected="true" selected
                                 tabindex="0">
                              <span class="mdc-tab__content">
                                  <span class="mdc-tab__text-label">Dart</span>
@@ -112,6 +112,12 @@ BSD-style license that can be found in the LICENSE file. -->
                         </span>
                         <span class="mdc-list-item__text">Show tests</span>
                     </li>
+                    <li id="editable-test-solution-menu-item" class="mdc-list-item" role="menuitem">
+                        <span id="editable-test-solution-checkmark" class="mdc-list-item__graphic hide">
+                            <i class="material-icons mdc-select__icon" tabindex="-1" role="button">check</i>
+                        </span>
+                        <span class="mdc-list-item__text">Editable test/solution</span>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -127,6 +133,10 @@ BSD-style license that can be found in the LICENSE file. -->
         </div>
         <div id="test-view" class="flex-auto d-flex flex-row no-overflow" spellcheck="false" hidden>
             <div id="test-editor" class="flex-auto d-flex flex-column" spellcheck="false"></div>
+        </div>
+        <div class="editor-button-group">
+            <button id="copy-code" title="Copy code" class="mdc-icon-button material-icons">file_copy</button>
+            <button id="open-in-dartpad" title="Full screen" class="mdc-icon-button material-icons">launch</button>
         </div>
     </div>
     <div id="console-view" hidden>

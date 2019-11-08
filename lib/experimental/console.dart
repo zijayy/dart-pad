@@ -1,3 +1,7 @@
+// Copyright (c) 2019, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 import 'dart:async';
 import 'dart:html';
 
@@ -42,7 +46,10 @@ class Console {
     if (_bufferedOutput.length == 1) {
       Timer(bufferDuration, () {
         element.element.children.addAll(_bufferedOutput);
-        element.element.children.last.scrollIntoView(ScrollAlignment.BOTTOM);
+        // Using scrollIntoView(ScrollAlignment.BOTTOM) causes the parent page
+        // to scroll, so set the scrollTop instead.
+        var last = element.element.children.last;
+        element.element.scrollTop = last.offsetTop;
         _bufferedOutput.clear();
       });
     }

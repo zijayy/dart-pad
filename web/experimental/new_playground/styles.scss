@@ -26,7 +26,7 @@ body {
 header {
   background-color: $dark-gutter-background-color;
   height: 48px;
-  padding: 0 24px;
+  padding-left: 24px;
   @include layout-center;
 
   .header-title {
@@ -58,18 +58,6 @@ header {
     margin-left: 1em;
     margin-right: 1em;
     user-select: none;
-  }
-
-  #github-button { background: url(/pictures/github-light-32px.png) no-repeat;
-    filter: brightness(0.8);
-    width: 32px;
-    height: 32px;
-    margin: 8px 0 8px 16px;
-    border: none;
-
-    &:hover {
-      filter: brightness(0.6);
-    }
   }
 }
 
@@ -154,7 +142,7 @@ a {
 #editor-host {
   @include layout-vertical;
   @include layout-flex;
-  padding: 0 1em;
+  padding: 0 8px;
 
   .CodeMirror {
     @include layout-flex;
@@ -169,6 +157,11 @@ a {
   @include layout-center;
   padding: 4px;
   height: 48px;
+
+  .button-group {
+    @include layout-horizontal;
+    @include layout-center;
+  }
 }
 
 // Console
@@ -440,12 +433,6 @@ a {
   margin-left: 12px;
 }
 
-// Keys dialog
-.mdc-dialog__surface {
-  // Make the dialog a minimum of 400px to best display the keyboard dialog
-  min-width: 512px !important;
-}
-
 .keyboard {
   display: inline-block;
   background: url('../../pictures/keyboard.svg') center no-repeat;
@@ -461,35 +448,6 @@ a {
   }
 }
 
-.keys-dialog {
-  top: auto !important;
-  bottom: 20px;
-
-  dl {
-    padding: 0.5em;
-  }
-
-  dt {
-    float: left;
-    clear: left;
-  }
-  dd {
-    text-align: right;
-  }
-  dd > span {
-    font-family: "Helvetica Neue", "Inconsolata", monospace;
-    padding: 0 4px;
-    font-size: 10pt;
-    color: $dark-blue;
-    border: 1px solid $dark-blue;
-    border-radius: 2px;
-    margin: 2px 2px;
-    white-space: nowrap;
-    display: inline-block;
-  }
-
-}
-
 // Unread console counter
 .Counter {
   margin-left: 4px;
@@ -501,4 +459,72 @@ a {
   color: $dark-teal;
   background-color: fade_out($dark-teal, 0.5);
   border-radius: 20px;
+}
+
+#new-pad-dialog {
+  .mdc-dialog__content {
+    @include layout-horizontal;
+    @include layout-center;
+    @include layout-justified;
+  }
+
+  .select-project-button {
+    cursor: pointer;
+    margin: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    &:hover {
+      background-color: lighten($dark-code-background-color, 12%);
+    }
+    &.selected{
+      background-color: lighten($dark-code-background-color, 6%);
+    }
+    @include layout-vertical;
+    @include layout-center;
+    img {
+      width: auto;
+      max-height: 192px;
+    }
+  }
+
+  .mdc-switch {
+    @include mdc-switch-toggled-on-color($button-color);
+    @include mdc-switch-toggled-off-color($secondary-color);
+  }
+
+  label[for=new-pad-html-switch] {
+    margin-left: 8px;
+  }
+}
+
+#samples-menu .mdc-list-item__graphic {
+    height: auto;
+    width: 20px;
+    margin-right: 14px;
+}
+
+// responsive layout
+@media screen and (max-width: 850px) {
+  #new-button {
+    display: none;
+  }
+
+  #format-button {
+    display: none;
+  }
+
+  #keyboard-button {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  .header-gist-name {
+    display: none !important;
+  }
+}
+
+// Misc
+.hide {
+  opacity: 0;
 }

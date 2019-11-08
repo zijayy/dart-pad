@@ -26,9 +26,11 @@ import '../services/execution_iframe.dart';
 import '../sharing/gists.dart';
 import '../src/util.dart';
 import 'analysis_results_controller.dart';
+import 'button.dart';
 import 'console.dart';
 import 'counter.dart';
 import 'dialog.dart';
+import 'keymap.dart';
 
 const int defaultSplitterWidth = 6;
 
@@ -36,7 +38,7 @@ NewEmbed get newEmbed => _newEmbed;
 
 NewEmbed _newEmbed;
 
-var codeMirrorOptions = {
+const codeMirrorOptions = {
   'continueComments': {'continueLineComment': false},
   'autofocus': false,
   'autoCloseBrackets': true,
@@ -52,7 +54,6 @@ var codeMirrorOptions = {
     'Tab': 'insertSoftTab'
   },
   'hintOptions': {'completeSingle': false},
-  'theme': 'zenburn',
   'scrollbarStyle': 'simple',
 };
 
@@ -74,11 +75,13 @@ class NewEmbed {
   final NewEmbedOptions options;
 
   var _executionButtonCount = 0;
-  DisableableButton executeButton;
-  DisableableButton reloadGistButton;
-  DisableableButton formatButton;
-  DisableableButton showHintButton;
-  DisableableButton menuButton;
+  MDCButton executeButton;
+  MDCButton reloadGistButton;
+  MDCButton formatButton;
+  MDCButton showHintButton;
+  MDCButton copyCodeButton;
+  MDCButton openInDartPadButton;
+  MDCButton menuButton;
 
   DElement navBarElement;
   NewEmbedTabController tabController;
@@ -92,6 +95,8 @@ class NewEmbed {
 
   DElement morePopover;
   DElement showTestCodeCheckmark;
+  DElement editableTestSolutionCheckmark;
+  bool _editableTestSolution = false;
   bool _showTestCode = false;
 
   Counter unreadConsoleCounter;
@@ -144,6 +149,7 @@ class NewEmbed {
     formatButton.disabled = value;
     reloadGistButton.disabled = value;
     showHintButton?.disabled = value;
+    copyCodeButton?.disabled = value;
   }
 
   NewEmbed(this.options) {
@@ -192,52 +198,75 @@ class NewEmbed {
 
     unreadConsoleCounter = Counter(querySelector('#unread-console-counter'));
 
-    executeButton =
-        DisableableButton(querySelector('#execute'), _handleExecute);
+    executeButton = MDCButton(querySelector('#execute'))
+      ..onClick.listen((_) => _handleExecute());
 
-    reloadGistButton = DisableableButton(querySelector('#reload-gist'), () {
-      if (gistId.isNotEmpty || sampleId.isNotEmpty) {
-        _loadAndShowGist();
-      } else {
-        _resetCode();
-      }
-    });
-
-    showHintButton = DisableableButton(querySelector('#show-hint'), () {
-      var hintElement = DivElement()..text = context.hint;
-      var showSolutionButton = AnchorElement()
-        ..style.cursor = 'pointer'
-        ..text = 'Show solution';
-      showSolutionButton.onClick.listen((_) {
-        tabController.selectTab('solution', force: true);
+    reloadGistButton = MDCButton(querySelector('#reload-gist'))
+      ..onClick.listen((_) {
+        if (gistId.isNotEmpty || sampleId.isNotEmpty || githubParamsPresent) {
+          _loadAndShowGist();
+        } else {
+          _resetCode();
+        }
       });
-      hintBox.showElements([hintElement, showSolutionButton]);
-      ga?.sendEvent('view', 'hint');
-    })
-      ..hidden = true;
+
+    copyCodeButton = MDCButton(querySelector('#copy-code'), isIcon: true)
+      ..onClick.listen((_) => _handleCopyCode());
+    openInDartPadButton =
+        MDCButton(querySelector('#open-in-dartpad'), isIcon: true)
+          ..onClick.listen((_) => _handleOpenInDartPad());
+
+    showHintButton = MDCButton(querySelector('#show-hint'))
+      ..onClick.listen((_) {
+        var hintElement = DivElement()..text = context.hint;
+        var showSolutionButton = AnchorElement()
+          ..style.cursor = 'pointer'
+          ..text = 'Show solution';
+        showSolutionButton.onClick.listen((_) {
+          tabController.selectTab('solution', force: true);
+        });
+        hintBox.showElements([hintElement, showSolutionButton]);
+        ga?.sendEvent('view', 'hint');
+      })
+      ..element.hidden = true;
 
     tabController.setTabVisibility('test', false);
     showTestCodeCheckmark = DElement(querySelector('#show-test-checkmark'));
+    editableTestSolutionCheckmark =
+        DElement(querySelector('#editable-test-solution-checkmark'));
 
     morePopover = DElement(querySelector('#more-popover'));
-    menuButton = DisableableButton(querySelector('#menu-button'), () {
-      menu.open = !menu.open;
-    });
+    menuButton = MDCButton(querySelector('#menu-button'), isIcon: true)
+      ..onClick.listen((_) {
+        menu.open = !menu.open;
+      });
     menu = MDCMenu(querySelector('#main-menu'))
       ..setAnchorCorner(AnchorCorner.bottomLeft)
-      ..setAnchorElement(menuButton._element.element);
+      ..setAnchorElement(menuButton.element);
     menu.listen('MDCMenu:selected', (e) {
-      if ((e as CustomEvent).detail['index'] == 0) {
-        _showTestCode = !_showTestCode;
-        showTestCodeCheckmark.toggleClass('hide', !_showTestCode);
-        tabController.setTabVisibility('test', _showTestCode);
+      final selectedIndex = (e as CustomEvent).detail['index'];
+      switch (selectedIndex) {
+        case 0:
+          // Show test code
+          _showTestCode = !_showTestCode;
+          showTestCodeCheckmark.toggleClass('hide', !_showTestCode);
+          tabController.setTabVisibility('test', _showTestCode);
+          break;
+        case 1:
+          // Editable test/solution
+          _editableTestSolution = !_editableTestSolution;
+          editableTestSolutionCheckmark.toggleClass(
+              'hide', !_editableTestSolution);
+          testEditor.readOnly =
+              solutionEditor.readOnly = !_editableTestSolution;
+          break;
       }
     });
 
-    formatButton = DisableableButton(
-      querySelector('#format-code'),
-      _performFormat,
-    );
+    formatButton = MDCButton(querySelector('#format-code'))
+      ..onClick.listen(
+        (_) => _format(),
+      );
 
     testResultBox = FlashBox(querySelector('#test-result-box'));
     hintBox = FlashBox(querySelector('#hint-box'));
@@ -256,9 +285,7 @@ class NewEmbed {
         options: codeMirrorOptions)
       ..theme = editorTheme
       ..mode = 'dart'
-      // TODO(devoncarew): We should make this read-only after initial beta
-      // testing.
-      //..readOnly = true
+      ..readOnly = !_editableTestSolution
       ..showLineNumbers = true;
 
     solutionEditor = editorFactory.createFromElement(
@@ -266,6 +293,7 @@ class NewEmbed {
         options: codeMirrorOptions)
       ..theme = editorTheme
       ..mode = 'dart'
+      ..readOnly = !_editableTestSolution
       ..showLineNumbers = true;
 
     htmlEditor = editorFactory.createFromElement(querySelector('#html-editor'),
@@ -367,7 +395,6 @@ class NewEmbed {
     linearProgress = MDCLinearProgress(querySelector('#progress-bar'));
     linearProgress.determinate = false;
 
-    _initializeMaterialRipples();
     _initModules()
         .then((_) => _initNewEmbed())
         .then((_) => _emitReady())
@@ -393,6 +420,10 @@ class NewEmbed {
       if (type == 'sourceCode') {
         lastInjectedSourceCode = Map<String, String>.from(data['sourceCode']);
         _resetCode();
+
+        if (autoRunEnabled) {
+          _handleExecute();
+        }
       }
     });
   }
@@ -402,27 +433,50 @@ class NewEmbed {
     window.parent.postMessage({'sender': 'frame', 'type': 'ready'}, '*');
   }
 
+  String _getQueryParam(String key) {
+    final url = Uri.parse(window.location.toString());
+
+    if (url.hasQuery && url.queryParameters[key] != null) {
+      return url.queryParameters[key];
+    }
+
+    return '';
+  }
+
+  // Option for the GitHub gist ID that should be loaded into the editors.
   String get gistId {
-    final url = Uri.parse(window.location.toString());
-
-    if (url.hasQuery &&
-        url.queryParameters['id'] != null &&
-        isLegalGistId(url.queryParameters['id'])) {
-      return url.queryParameters['id'];
-    }
-
-    return '';
+    final id = _getQueryParam('id');
+    return isLegalGistId(id) ? id : '';
   }
 
-  String get sampleId {
+  // Option for Light / Dark theme (defaults to light)
+  bool get isDarkMode {
     final url = Uri.parse(window.location.toString());
-
-    if (url.hasQuery && url.queryParameters['sample_id'] != null) {
-      return url.queryParameters['sample_id'];
-    }
-
-    return '';
+    return url.queryParameters['theme'] == 'dark';
   }
+
+  // Option to run the snippet immediately (defaults to  false)
+  bool get autoRunEnabled {
+    final url = Uri.parse(window.location.toString());
+    return url.queryParameters['run'] == 'true';
+  }
+
+  // ID of an API Doc sample that should be loaded into the editors.
+  String get sampleId => _getQueryParam('sample_id');
+
+  // GitHub params for loading an exercise from a repo. The first three are
+  // required to load something, while the fourth, gh_ref, is an optional branch
+  // name or commit SHA.
+  String get githubOwner => _getQueryParam('gh_owner');
+
+  String get githubRepo => _getQueryParam('gh_repo');
+
+  String get githubPath => _getQueryParam('gh_path');
+
+  String get githubRef => _getQueryParam('gh_ref');
+
+  bool get githubParamsPresent =>
+      githubOwner.isNotEmpty && githubRepo.isNotEmpty && githubPath.isNotEmpty;
 
   Future<void> _initModules() async {
     ModuleManager modules = ModuleManager();
@@ -475,6 +529,12 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
     }, 'Quick fix');
 
     keys.bind(['ctrl-enter', 'macctrl-enter'], _handleExecute, 'Run');
+    keys.bind(['shift-ctrl-/', 'shift-macctrl-/'], () {
+      _showKeyboardDialog();
+    }, 'Keyboard Shortcuts');
+    keys.bind(['shift-ctrl-f', 'shift-macctrl-f'], () {
+      _format();
+    }, 'Format');
 
     document.onKeyUp.listen(_handleAutoCompletion);
 
@@ -509,8 +569,12 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
       minSize: [100, 100],
     );
 
-    if (gistId.isNotEmpty || sampleId.isNotEmpty) {
+    if (gistId.isNotEmpty || sampleId.isNotEmpty || githubParamsPresent) {
       _loadAndShowGist(analyze: false);
+    }
+
+    if (gistId.isEmpty) {
+      openInDartPadButton.toggleAttr('hidden', true);
     }
 
     // set enabled/disabled state of various buttons
@@ -518,8 +582,9 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
   }
 
   Future<void> _loadAndShowGist({bool analyze = true}) async {
-    if (gistId.isEmpty && sampleId.isEmpty) {
-      print('Cannot load gist: neither id nor sample_id is present.');
+    if (gistId.isEmpty && sampleId.isEmpty && !githubParamsPresent) {
+      print('Cannot load gist: neither id, sample_id, nor GitHub repo info is '
+          'present.');
       return;
     }
 
@@ -528,9 +593,20 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
     final GistLoader loader = deps[GistLoader];
 
     try {
-      final gist = gistId.isNotEmpty
-          ? await loader.loadGist(gistId)
-          : await loader.loadGistFromAPIDocs(sampleId);
+      Gist gist;
+
+      if (gistId.isNotEmpty) {
+        gist = await loader.loadGist(gistId);
+      } else if (sampleId.isNotEmpty) {
+        gist = await loader.loadGistFromAPIDocs(sampleId);
+      } else {
+        gist = await loader.loadGistFromRepo(
+          owner: githubOwner,
+          repo: githubRepo,
+          path: githubPath,
+          ref: githubRef,
+        );
+      }
 
       setContextSources(<String, String>{
         'main.dart': gist.getFile('main.dart')?.content ?? '',
@@ -544,16 +620,22 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
       if (analyze) {
         _performAnalysis();
       }
+
+      if (autoRunEnabled) {
+        _handleExecute();
+      }
     } on GistLoaderException catch (ex) {
       // No gist was loaded, so clear the editors.
       setContextSources(<String, String>{});
 
-      if (ex.failureType == GistLoaderFailureType.gistDoesNotExist) {
-        await dialog.showOk('Error loading gist',
-            'No gist was found matching the ID provided ($gistId).');
-      } else if (ex.failureType == GistLoaderFailureType.rateLimitExceeded) {
+      if (ex.failureType == GistLoaderFailureType.contentNotFound) {
         await dialog.showOk(
             'Error loading gist',
+            'No gist was found for the gist ID, sample ID, or repository '
+                'information provided.');
+      } else if (ex.failureType == GistLoaderFailureType.rateLimitExceeded) {
+        await dialog.showOk(
+            'Error loading files',
             'GitHub\'s rate limit for '
                 'API requests has been exceeded. This is typically caused by '
                 'repeatedly loading a single page that has many DartPad embeds or '
@@ -561,17 +643,71 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
                 'API server) from a single, shared IP address. Quotas are '
                 'typically renewed within an hour, so the best course of action is '
                 'to try back later.');
-      } else {
+      } else if (ex.failureType ==
+          GistLoaderFailureType.invalidExerciseMetadata) {
+        if (ex.message != null) {
+          print(ex.message);
+        }
         await dialog.showOk(
-            'Error loading gist',
-            'An error occurred while '
-                'loading Gist ID $gistId.');
+            'Error loading files',
+            'DartPad could not load the requested exercise. Either one of the '
+                'required files wasn\'t available, or the exercise metadata was '
+                'invalid.');
+      } else {
+        await dialog.showOk('Error loading files',
+            'An error occurred while the requested files.');
       }
     }
   }
 
   void _resetCode() {
     setContextSources(lastInjectedSourceCode);
+  }
+
+  void _handleCopyCode() {
+    var textElement = document.createElement('textarea') as TextAreaElement;
+    textElement.value = _getActiveSourceCode();
+    document.body.append(textElement);
+    textElement.select();
+    document.execCommand('copy');
+    textElement.remove();
+  }
+
+  void _handleOpenInDartPad() {
+    window.open('/embed-$_modeName.html?id=$gistId', 'DartPad_$gistId');
+  }
+
+  /// Returns the name of the current embed mode (html, flutter, inline, dart)
+  String get _modeName {
+    return options.mode.toString().split('.').last;
+  }
+
+  String _getActiveSourceCode() {
+    String activeSource;
+    String activeTabName = tabController.selectedTab.name;
+
+    switch (activeTabName) {
+      case 'editor':
+        activeSource = context.dartSource;
+        break;
+      case 'css':
+        activeSource = context.cssSource;
+        break;
+      case 'html':
+        activeSource = context.htmlSource;
+        break;
+      case 'solution':
+        activeSource = context.solution;
+        break;
+      case 'test':
+        activeSource = context.testMethod;
+        break;
+      default:
+        activeSource = context.dartSource;
+        break;
+    }
+
+    return activeSource;
   }
 
   void setContextSources(Map<String, String> sources) {
@@ -583,8 +719,8 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
     context.hint = sources['hint.txt'] ?? '';
     tabController.setTabVisibility(
         'test', context.testMethod.isNotEmpty && _showTestCode);
-    menuButton.hidden = context.testMethod.isEmpty;
-    showHintButton?.hidden = context.hint.isEmpty;
+    menuButton.toggleAttr('hidden', context.testMethod.isEmpty);
+    showHintButton.element.hidden = context.hint.isEmpty;
     solutionTab?.toggleAttr('hidden', context.solution.isEmpty);
     editorIsBusy = false;
   }
@@ -734,7 +870,11 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
     });
   }
 
-  void _performFormat() async {
+  void _showKeyboardDialog() {
+    dialog.showOk('Keyboard shortcuts', keyMapToHtml(keys.inverseBindings));
+  }
+
+  void _format() async {
     String originalSource = userCodeEditor.document.value;
     SourceRequest input = SourceRequest()..source = originalSource;
 
@@ -765,11 +905,6 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
     }
   }
 
-  bool get isDarkMode {
-    final url = Uri.parse(window.location.toString());
-    return url.queryParameters['theme'] == 'dark';
-  }
-
   int get initialSplitPercent {
     const int defaultSplitPercentage = 70;
 
@@ -794,13 +929,6 @@ major browsers, such as Firefox, Edge (dev channel), or Chrome.
         doc.posFromIndex(charStart), doc.posFromIndex(charStart + charLength));
 
     if (focus) userCodeEditor.focus();
-  }
-
-  void _initializeMaterialRipples() {
-    MDCRipple(executeButton._element.element);
-    MDCRipple(reloadGistButton._element.element);
-    MDCRipple(formatButton._element.element);
-    MDCRipple(showHintButton._element.element);
   }
 }
 
