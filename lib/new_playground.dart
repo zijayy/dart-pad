@@ -89,6 +89,7 @@ class Playground implements GistContainer, GistController {
   MDCButton editorDocsTab;
   MDCButton closePanelButton;
   MDCButton moreMenuButton;
+  DElement editorPanelHeader;
   DElement editorPanelFooter;
   MDCMenu samplesMenu;
   MDCMenu moreMenu;
@@ -97,6 +98,7 @@ class Playground implements GistContainer, GistController {
   DElement titleElement;
   MaterialTabController webLayoutTabController;
   DElement webTabBar;
+  DElement webOutputLabel;
 
   Splitter splitter;
   Splitter rightSplitter;
@@ -129,6 +131,7 @@ class Playground implements GistContainer, GistController {
       _initGistStorage();
       _initLayoutDetection();
       _initButtons();
+      _initLabels();
       _initSamplesMenu();
       _initMoreMenu();
       _initSplitters();
@@ -140,10 +143,13 @@ class Playground implements GistContainer, GistController {
 
   DivElement get _editorHost => querySelector('#editor-host');
   DivElement get _rightConsoleElement => querySelector('#right-output-panel');
+  DivElement get _rightConsoleContentElement => querySelector('#right-output-panel-content');
   DivElement get _leftConsoleElement => querySelector('#left-output-panel');
   IFrameElement get _frame => querySelector('#frame');
   DivElement get _rightDocPanel => querySelector('#right-doc-panel');
+  DivElement get _rightDocContentElement => querySelector('#right-doc-panel-content');
   DivElement get _leftDocPanel => querySelector('#left-doc-panel');
+  DivElement get _editorPanelHeader => querySelector('#editor-panel-header');
   DivElement get _editorPanelFooter => querySelector('#editor-panel-footer');
   bool get _isCompletionActive => editor.completionActive;
 
@@ -216,6 +222,13 @@ class Playground implements GistContainer, GistController {
         .listen((_) => _showKeyboardDialog());
   }
 
+  void _initLabels() {
+    var webOutputLabelElement = querySelector('#web-output-label');
+    if (webOutputLabelElement != null) {
+      webOutputLabel = DElement(webOutputLabelElement);
+    }
+  }
+
   void _initSamplesMenu() {
     var element = querySelector('#samples-menu');
 
@@ -227,9 +240,9 @@ class Playground implements GistContainer, GistController {
       Sample('a559420eed617dab7a196b5ea0b64fba', 'Sunflower', Layout.html),
       Sample('cb9b199b1085873de191e32a1dd5ca4f', 'WebSockets', Layout.html),
       Sample('b6409e10de32b280b8938aa75364fa7b', 'Counter', Layout.flutter),
-      Sample('103e0db091ee58934b83a283a40a3d5c', 'Todo App', Layout.flutter),
+      Sample('1ae68b761529fd721b84d8709c6017bd', 'Todo App', Layout.flutter),
       Sample(
-          '877a75d7aae54f48c8024b0ddce354df', 'Sliding Square', Layout.flutter),
+          'ceb5101e540378761391e2b7f6b64325', 'Sliding Square', Layout.flutter),
     ];
 
     var listElement = UListElement()
@@ -368,13 +381,14 @@ class Playground implements GistContainer, GistController {
   }
 
   void _initLayout() {
+    editorPanelHeader = DElement (_editorPanelHeader);
     editorPanelFooter = DElement(_editorPanelFooter);
     _changeLayout(Layout.dart);
   }
 
   void _initConsoles() {
     _leftConsole = Console(DElement(_leftConsoleElement));
-    _rightConsole = Console(DElement(_rightConsoleElement));
+    _rightConsole = Console(DElement(_rightConsoleContentElement));
     unreadConsoleCounter = Counter(querySelector('#unread-console-counter'));
   }
 
@@ -412,7 +426,7 @@ class Playground implements GistContainer, GistController {
     keys.bind(['ctrl-enter'], _handleRun, 'Run');
     keys.bind(['f1'], () {
       ga.sendEvent('main', 'help');
-      docHandler.generateDoc(_rightDocPanel);
+      docHandler.generateDoc(_rightDocContentElement);
       docHandler.generateDoc(_leftDocPanel);
     }, 'Documentation');
 
@@ -434,7 +448,7 @@ class Playground implements GistContainer, GistController {
     document.onKeyUp.listen((e) {
       if (editor.completionActive ||
           DocHandler.cursorKeys.contains(e.keyCode)) {
-        docHandler.generateDoc(_rightDocPanel);
+        docHandler.generateDoc(_rightDocContentElement);
         docHandler.generateDoc(_leftDocPanel);
       }
       _handleAutoCompletion(e);
@@ -470,7 +484,7 @@ class Playground implements GistContainer, GistController {
       // Delay to give codemirror time to process the mouse event.
       Timer.run(() {
         if (!_context.cursorPositionIsWhitespace()) {
-          docHandler.generateDoc(_rightDocPanel);
+          docHandler.generateDoc(_rightDocContentElement);
           docHandler.generateDoc(_leftDocPanel);
         }
       });
@@ -758,6 +772,7 @@ class Playground implements GistContainer, GistController {
       _showOutput('Error compiling to JavaScript:\n$message', error: true);
     } finally {
       runButton.disabled = false;
+      webOutputLabel.setAttr('hidden');
     }
   }
 
@@ -895,6 +910,8 @@ class Playground implements GistContainer, GistController {
       webTabBar.setAttr('hidden');
       webLayoutTabController.selectTab('dart');
       _initRightSplitter();
+      editorPanelHeader.setAttr('hidden');
+      webOutputLabel.setAttr('hidden');
     } else if (layout == Layout.html) {
       _disposeRightSplitter();
       _frame.hidden = false;
@@ -904,6 +921,8 @@ class Playground implements GistContainer, GistController {
       _rightConsoleElement.setAttribute('hidden', '');
       webTabBar.toggleAttr('hidden', false);
       webLayoutTabController.selectTab('dart');
+      editorPanelHeader.clearAttr('hidden');
+      webOutputLabel.setAttr('hidden');
     } else if (layout == Layout.flutter) {
       _disposeRightSplitter();
       _frame.hidden = false;
@@ -913,6 +932,8 @@ class Playground implements GistContainer, GistController {
       _rightConsoleElement.setAttribute('hidden', '');
       webTabBar.setAttr('hidden');
       webLayoutTabController.selectTab('dart');
+      editorPanelHeader.setAttr('hidden');
+      webOutputLabel.clearAttr('hidden');
     }
   }
 
@@ -1220,7 +1241,7 @@ class NewPadDialog {
       _flutterButton.root.classes.remove('selected');
       _dartButton.root.classes.add('selected');
       _createButton.toggleAttr('disabled', false);
-      _htmlSwitchContainer.toggleAttr('hidden', false);
+      _htmlSwitchContainer.toggleClass('hide', false);
       _htmlSwitch.disabled = false;
     });
 
@@ -1228,7 +1249,7 @@ class NewPadDialog {
       _dartButton.root.classes.remove('selected');
       _flutterButton.root.classes.add('selected');
       _createButton.toggleAttr('disabled', false);
-      _htmlSwitchContainer.toggleAttr('hidden', true);
+      _htmlSwitchContainer.toggleClass('hide', true);
     });
 
     var cancelSub = _cancelButton.onClick.listen((_) {
