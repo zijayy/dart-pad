@@ -16,10 +16,10 @@ class Analytics {
   void sendPage() => _ga2('send', 'pageview');
 
   void sendEvent(String category, String action, {String label}) {
-    Map m = {
+    var m = <String, dynamic>{
       'hitType': 'event',
       'eventCategory': category,
-      'eventAction': action
+      'eventAction': action,
     };
     if (label != null) m['eventLabel'] = label;
     _ga('send', m);
@@ -27,7 +27,7 @@ class Analytics {
 
   void sendTiming(String category, String variable, int valueMillis,
       {String label}) {
-    Map m = {
+    var m = <String, dynamic>{
       'hitType': 'timing',
       'timingCategory': category,
       'timingVar': variable,
@@ -38,14 +38,16 @@ class Analytics {
   }
 
   void sendException(String description, {bool fatal}) {
-    Map m = {'exDescription': description};
+    var m = <String, dynamic>{
+      'exDescription': description,
+    };
     if (fatal != null) m['exFatal'] = fatal;
     _ga2('send', 'exception', m);
   }
 
   void _ga(String method, [Map args]) {
     if (isAvailable) {
-      List params = <dynamic>[method];
+      var params = <dynamic>[method];
       if (args != null) params.add(JsObject.jsify(args));
       _gaFunction.apply(params);
     }
@@ -53,7 +55,7 @@ class Analytics {
 
   void _ga2(String method, String type, [Map args]) {
     if (isAvailable) {
-      List params = <dynamic>[method, type];
+      var params = <dynamic>[method, type];
       if (args != null) params.add(JsObject.jsify(args));
       _gaFunction.apply(params);
     }
