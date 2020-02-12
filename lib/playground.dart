@@ -36,7 +36,6 @@ import 'modules/codemirror_module.dart';
 import 'modules/dart_pad_module.dart';
 import 'modules/dartservices_module.dart';
 import 'playground_context.dart';
-import 'services/_dartpadsupportservices.dart';
 import 'services/common.dart';
 import 'services/dartservices.dart';
 import 'services/execution_iframe.dart';
@@ -330,6 +329,12 @@ class Playground implements GistContainer, GistController {
         case 1:
           _showGitHubPage();
           break;
+        case 2:
+          _showDartDevPage();
+          break;
+        case 3:
+          _showFlutterDevPage();
+          break;
       }
     });
   }
@@ -425,7 +430,6 @@ class Playground implements GistContainer, GistController {
 
     modules.register(DartPadModule());
     modules.register(DartServicesModule());
-    modules.register(DartSupportServicesModule());
     modules.register(CodeMirrorModule());
 
     await modules.start();
@@ -1004,6 +1008,14 @@ class Playground implements GistContainer, GistController {
 
   void _showGitHubPage() {
     window.open('https://github.com/dart-lang/dart-pad', 'DartPad on GitHub');
+  }
+
+  void _showDartDevPage() {
+    window.open('https://dart.dev', 'dart.dev');
+  }
+
+  void _showFlutterDevPage() {
+    window.open('https://flutter.dev', 'flutter.dev');
   }
 
   @override
