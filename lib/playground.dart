@@ -8,7 +8,6 @@ import 'dart:async';
 import 'dart:html' hide Console;
 
 import 'package:dart_pad/editing/editor_codemirror.dart';
-import 'package:dart_pad/util/detect_webkit.dart';
 import 'package:logging/logging.dart';
 import 'package:mdc_web/mdc_web.dart';
 import 'package:meta/meta.dart';
@@ -121,8 +120,6 @@ class Playground implements GistContainer, GistController {
   Console _leftConsole;
   Console _rightConsole;
   Counter unreadConsoleCounter;
-
-  bool _hasShownWebKitDialog = false;
 
   Playground() {
     _initModules().then((_) {
@@ -592,7 +589,6 @@ class Playground implements GistContainer, GistController {
 
   Future<void> showNew(Layout layout) async {
     var loadResult = _loadGist();
-    var shouldAutoRun = loadResult == LoadGistResult.storage;
 
     // If no gist was loaded, use a new Dart gist.
     if (loadResult == LoadGistResult.none) {
@@ -617,7 +613,7 @@ class Playground implements GistContainer, GistController {
       _jumpToLine(int.parse(url.queryParameters['line']));
     }
 
-    await _analyzeAndRun(autoRun: shouldAutoRun);
+    await _analyzeAndRun();
   }
 
   Gist _createGist(Layout layout) {
@@ -669,12 +665,12 @@ class Playground implements GistContainer, GistController {
 
   /// Analyzes and runs the gist.  Auto-runs the gist if [autoRun] is true and
   /// the analyzer comes back clean.
-  Future<void> _analyzeAndRun({bool autoRun = false}) {
+  Future<void> _analyzeAndRun() {
     var completer = Completer();
     Timer.run(() async {
       try {
         var result = await _performAnalysis();
-        if (result && !autoRun) {
+        if (result) {
           _handleRun();
         }
       } catch (e) {
@@ -759,9 +755,7 @@ class Playground implements GistContainer, GistController {
     final compileRequest = CompileRequest()..source = context.dartSource;
 
     try {
-      if (hasFlutterContent(_context.dartSource) &&
-          !isRunningInWebKit() &&
-          _hasShownWebKitDialog) {
+      if (hasFlutterContent(_context.dartSource)) {
         final response = await dartServices
             .compileDDC(compileRequest)
             .timeout(longServiceCallTimeout);
@@ -801,7 +795,7 @@ class Playground implements GistContainer, GistController {
       }
     } catch (e) {
       ga.sendException('${e.runtimeType}');
-      final message = (e is DetailedApiRequestError) ? e.message : '$e';
+      final message = e is ApiRequestError ? e.message : '$e';
       _showSnackbar('Error compiling to JavaScript');
       _clearOutput();
       _showOutput('Error compiling to JavaScript:\n$message', error: true);
@@ -957,10 +951,6 @@ class Playground implements GistContainer, GistController {
       editorPanelHeader.clearAttr('hidden');
       webOutputLabel.setAttr('hidden');
     } else if (layout == Layout.flutter) {
-      if (!_hasShownWebKitDialog) {
-        notifyIfWebKit(dialog);
-      }
-      _hasShownWebKitDialog = true;
       _disposeRightSplitter();
       _frame.hidden = false;
       editorPanelFooter.clearAttr('hidden');
