@@ -69,7 +69,7 @@ class ExecutionServiceIFrame implements ExecutionService {
   /// TODO(redbrogdon): Format message so internal double quotes are escaped.
   @override
   String get testResultDecoration => '''
-void _result(bool success, [List<String> messages]) {
+void _result(bool success, [List<String>? messages]) {
   // Join messages into a comma-separated list for inclusion in the JSON array.
   final joinedMessages = messages?.map((m) => '"\$m"')?.join(',') ?? '';
 
@@ -143,6 +143,7 @@ require.config({
     var postfix = '';
     if (usesRequireJs) {
       postfix = '''
+
 require(['dart_sdk'],
   function(sdk) {
     'use strict';
@@ -153,8 +154,16 @@ require(['dart_sdk'],
 require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
     // SDK initialization.
     dart_sdk.dart.setStartAsyncSynchronously(true);
-    dart_sdk._isolate_helper.startRootIsolate(() => {}, []);
+    
+    // TODO(redbrogdon): Avoid accessing this member directly. Right now,
+    // There's no other convenient way of guaranteeing that sound null safety
+    // hasn't been turned on.
+    if (!dart_sdk.dart._setNullSafety) {
+      dart_sdk.dart.nullSafety(true);
+    }
 
+    dart_sdk._isolate_helper.startRootIsolate(() => {}, []);
+        
     // Loads the `dartpad_main` module and runs its bootstrapped main method.
     //
     // DDK provides the user's code in a RequireJS module, which exports an
@@ -176,7 +185,26 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
 
     for (var prop in dartpad_main) {
           if (prop.endsWith("__bootstrap")) {
-            dartpad_main[prop].main();
+            // Wrapping this in a try-catch to grab any Dart errors/exceptions
+            // coming out of main. Because the SDKs are loaded across origins,
+            // The browser may hide the actual error when reporting it to
+            // window.onerror. This allows us to catch the real exception and
+            // get it into the console.
+            try {
+              dartpad_main[prop].main();
+            } catch (error) {           
+              var msg = error.toString().split("\\n")[0];
+              console.log(msg);
+              parent.postMessage(
+                {
+                  'sender': 'frame', 
+                  'type': 'stderr', 
+                  'message': msg
+                },
+                '*'
+              );
+
+            }
           }
     }});
 ''';
