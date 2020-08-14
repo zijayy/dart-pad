@@ -783,9 +783,9 @@ class Embed {
     var input = CompileRequest()..source = fullCode;
 
     dartServices
-        .compileDDC(input)
+        .compile(input)
         .timeout(longServiceCallTimeout)
-        .then((CompileDDCResponse response) {
+        .then((CompileResponse response) {
       final htmlContent =
           (options.mode == EmbedMode.html) ? context.htmlSource : '';
       final cssContent =
@@ -794,7 +794,6 @@ class Embed {
         htmlContent,
         cssContent,
         response.result,
-        modulesBaseUrl: response.modulesBaseUrl,
       );
       ga?.sendEvent('execution', 'ddc-compile-success');
     }).catchError((e, st) {

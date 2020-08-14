@@ -806,7 +806,7 @@ class Playground implements GistContainer, GistController {
         );
       } else {
         final response = await dartServices
-            .compileDDC(compileRequest)
+            .compile(compileRequest)
             .timeout(longServiceCallTimeout);
 
         ga.sendTiming(
@@ -821,7 +821,6 @@ class Playground implements GistContainer, GistController {
           _context.htmlSource,
           _context.cssSource,
           response.result,
-          modulesBaseUrl: response.modulesBaseUrl,
         );
       }
     } catch (e) {
