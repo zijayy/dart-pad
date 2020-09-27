@@ -991,13 +991,16 @@ class Playground implements GistContainer, GistController {
       editorPanelHeader.clearAttr('hidden');
       webOutputLabel.setAttr('hidden');
     } else if (layout == Layout.flutter) {
-      dialog.showOk(
-        'Flutter is not yet supported',
-        'Null safety has not yet been integrated into the Flutter SDK. As '
-            'a result, Flutter packages cannot be imported in this version '
-            ' of DartPad. Try <a href="https://dartpad.dev">dartpad.dev</a> '
-            'for Flutter code instead.',
-      );
+      _disposeRightSplitter();
+      _frame.hidden = false;
+      editorPanelFooter.clearAttr('hidden');
+      _initOutputPanelTabs();
+      _rightDocPanel.setAttribute('hidden', '');
+      _rightConsoleElement.setAttribute('hidden', '');
+      webTabBar.setAttr('hidden');
+      webLayoutTabController.selectTab('dart');
+      editorPanelHeader.setAttr('hidden');
+      webOutputLabel.clearAttr('hidden');
     }
   }
 

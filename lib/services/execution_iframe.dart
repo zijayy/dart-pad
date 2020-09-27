@@ -155,13 +155,6 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
     // SDK initialization.
     dart_sdk.dart.setStartAsyncSynchronously(true);
     
-    // TODO(redbrogdon): Avoid accessing this member directly. Right now,
-    // There's no other convenient way of guaranteeing that sound null safety
-    // hasn't been turned on.
-    if (!dart_sdk.dart._setNullSafety) {
-      dart_sdk.dart.nullSafety(true);
-    }
-
     dart_sdk._isolate_helper.startRootIsolate(() => {}, []);
         
     // Loads the `dartpad_main` module and runs its bootstrapped main method.
