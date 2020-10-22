@@ -313,6 +313,21 @@ class Playground implements GistContainer, GistController {
         '11) Late and lazy',
         Layout.dart,
       ),
+      Sample(
+        '4d7650278c256e6bc5c9ba0bfb4b5f35',
+        'Flutter: Implicit animations',
+        Layout.flutter,
+      ),
+      Sample(
+        'e0a2e942e85fde2cd39b2741ff0c49e5',
+        'Flutter: Sunflower',
+        Layout.flutter,
+      ),
+      Sample(
+        '516c310a7c7d0c6fea90fcb8d26feec2',
+        'Flutter: Draggable animation',
+        Layout.flutter,
+      ),
     ];
 
     var listElement = UListElement()
