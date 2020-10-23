@@ -62,7 +62,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: darkBlue),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: darkBlue,
+      ),
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: Center(
@@ -76,7 +78,11 @@ class MyApp extends StatelessWidget {
 class MyWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Text('Hello, World!', style: Theme.of(context).textTheme.headline4);
+    final theme = Theme.of(context) ?? ThemeData();
+    return Text(
+      'Hello, World!',
+      style: theme.textTheme.headline4,
+    );
   }
 }
 ''';
