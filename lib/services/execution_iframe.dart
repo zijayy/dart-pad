@@ -69,15 +69,17 @@ class ExecutionServiceIFrame implements ExecutionService {
   /// TODO(redbrogdon): Format message so internal double quotes are escaped.
   @override
   String get testResultDecoration => '''
-void _result(bool success, [List<String> messages]) {
+void _result(bool success, [List<String> messages = const []]) {
   // Join messages into a comma-separated list for inclusion in the JSON array.
-  final joinedMessages = messages?.map((m) => '"\$m"')?.join(',') ?? '';
-
+  final joinedMessages = messages.map((m) => '"\$m"').join(',');
   print('$testKey{"success": \$success, "messages": [\$joinedMessages]}');
 }
 
 // Ensure we have at least one use of `_result`.
 var resultFunction = _result;
+
+// Placeholder for unimplemented methods in dart-pad exercises.
+Never TODO([String? message]) => throw UnimplementedError(message);
 ''';
 
   String _decorateJavaScript(String javaScript, {String modulesBaseUrl}) {
@@ -172,10 +174,11 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
     // The loop below iterates over the properties of the exported object,
     // looking for one that ends in "__bootstrap". Once found, it executes the
     // bootstrapped main method, which calls the user's main method, which
-    // (presumably) calls runApp and starts Flutter's rendering. 
+    // (presumably) calls runApp and starts Flutter's rendering.
 
+    // TODO: simplify this once we are firmly in a post Flutter 1.24 world.
     for (var prop in dartpad_main) {
-          if (prop.endsWith("__bootstrap")) {
+          if (prop.endsWith("bootstrap")) {
             dartpad_main[prop].main();
           }
     }});

@@ -16,16 +16,14 @@ import 'package:yaml/yaml.dart' as yaml;
 final FilePath _buildDir = FilePath('build');
 final FilePath _pkgDir = FilePath('third_party/pkg');
 final FilePath _routeDir = FilePath('third_party/pkg/route.dart');
-final FilePath _haikunatorDir = FilePath('third_party/pkg/haikunatordart');
 
 Map<String, String> get _env => Platform.environment;
 
 main(List<String> args) => grind(args);
 
-@Task('Copy the included route.dart/haikunator package in.')
+@Task('Copy the included route.dart package in.')
 updateThirdParty() {
   run('rm', arguments: ['-rf', _routeDir.path]);
-  run('rm', arguments: ['-rf', _haikunatorDir.path]);
   Directory(_pkgDir.path).createSync(recursive: true);
   run('git', arguments: [
     'clone',
@@ -35,21 +33,12 @@ updateThirdParty() {
     'git@github.com:jcollins-g/route.dart.git',
     _routeDir.path
   ]);
-  run('git', arguments: [
-    'clone',
-    '--branch',
-    'dart2-stable',
-    '--depth=1',
-    'git@github.com:jcollins-g/haikunatordart.git',
-    _haikunatorDir.path
-  ]);
   run('rm', workingDirectory: _routeDir.path, arguments: ['-rf', '.git']);
-  run('rm', workingDirectory: _haikunatorDir.path, arguments: ['-rf', '.git']);
 }
 
 @Task()
 analyze() {
-  PubApp.local('tuneup')..run(['check']);
+  PubApp.local('tuneup').run(['check']);
 }
 
 @Task()
@@ -269,7 +258,7 @@ coverage() {
 
 @DefaultTask()
 @Depends(analyze, testCli, testWeb, coverage, build)
-void buildbot() => null;
+void buildbot() {}
 
 @Task('Prepare the app for deployment')
 @Depends(buildbot)

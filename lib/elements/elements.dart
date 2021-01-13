@@ -174,11 +174,11 @@ class DSplitter extends DElement {
       element.children.add(e);
     }
 
-    var cancel = () {
+    void cancel() {
       if (_moveSub != null) _moveSub.cancel();
       if (_upSub != null) _upSub.cancel();
       if (onDragEnd != null) onDragEnd();
-    };
+    }
 
     element.onMouseDown.listen((MouseEvent e) {
       if (e.button != 0) return;
@@ -482,7 +482,7 @@ abstract class DDialog extends DElement {
     content = add(DElement.tag('div', classes: 'content'));
 
     // padding
-    add(DElement.tag('div'))..flex();
+    add(DElement.tag('div')).flex();
 
     buttonArea = add(DElement.tag('div', classes: 'buttons')
       ..setAttr('layout')
