@@ -7,7 +7,12 @@
 @import 'package:dart_pad/scss/variables';
 @import 'package:dart_pad/scss/shared';
 
+* {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
   top: 0;
   bottom: 0;
   left: 0;
@@ -15,11 +20,8 @@ body {
   position: absolute;
   overflow: hidden;
   font-size: 14px;
-}
-
-
-.medium-octicon {
-  font-size: 19px;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 // Tab Navigation
@@ -157,13 +159,14 @@ body {
   overflow: auto;
 }
 
-#console-expand-icon {
-  color: $label-color;
-  padding: 8px;
+#console-expand-icon-container {
+  height: 32px;
+  width: 32px;
 }
 
-#console-expand-icon:focus {
-  outline: none;
+#console-expand-icon {
+  color: $label-color;
+  @include mdc-icon-button-size(16px, 16px, 8px);
 }
 
 #console-output-container {
@@ -233,11 +236,6 @@ body {
   height: 40px;
 }
 
-// Primer
-.Popover-message {
-  padding: 8px !important;
-}
-
 // Material Design
 #progress-bar {
   position: absolute;
@@ -295,4 +293,21 @@ body {
 // Make the dialog show up even without everything initialized (for localStorage check)
 .mdc-dialog {
   z-index: 1000;
+}
+
+
+.d-flex {
+  display: flex !important;
+}
+
+.flex-auto {
+  flex: 1 1 auto !important;
+}
+
+.flex-row {
+  flex-direction: row !important;
+}
+
+.flex-column {
+  flex-direction: column !important;
 }

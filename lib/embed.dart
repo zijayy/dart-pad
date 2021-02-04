@@ -11,6 +11,7 @@ import 'package:dart_pad/src/ga.dart';
 import 'package:mdc_web/mdc_web.dart';
 import 'package:split/split.dart';
 
+import 'check_localstorage.dart';
 import 'completion.dart';
 import 'core/dependencies.dart';
 import 'core/modules.dart';
@@ -23,7 +24,6 @@ import 'elements/console.dart';
 import 'elements/counter.dart';
 import 'elements/dialog.dart';
 import 'elements/elements.dart';
-import 'check_localstorage.dart';
 import 'modules/dart_pad_module.dart';
 import 'modules/dartservices_module.dart';
 import 'services/common.dart';
@@ -32,7 +32,7 @@ import 'services/execution_iframe.dart';
 import 'sharing/gists.dart';
 import 'src/util.dart';
 import 'util/keymap.dart';
-import 'util/query_params.dart';
+import 'util/query_params.dart' show queryParams;
 
 const int defaultSplitterWidth = 6;
 
@@ -473,58 +473,43 @@ class Embed {
     window.parent.postMessage({'sender': 'frame', 'type': 'ready'}, '*');
   }
 
-  String _getQueryParam(String key) {
-    final url = Uri.parse(window.location.toString());
-
-    if (url.hasQuery && url.queryParameters[key] != null) {
-      return url.queryParameters[key];
-    }
-
-    return '';
-  }
-
   // Option for the GitHub gist ID that should be loaded into the editors.
   String get gistId {
-    final id = _getQueryParam('id');
+    final id = queryParams.gistId;
     return isLegalGistId(id) ? id : '';
   }
 
   // Option for Light / Dark theme (defaults to light)
   bool get isDarkMode {
-    final url = Uri.parse(window.location.toString());
-    return url.queryParameters['theme'] == 'dark';
+    return queryParams.theme == 'dark';
   }
 
   // Option to run the snippet immediately (defaults to  false)
   bool get autoRunEnabled {
-    final url = Uri.parse(window.location.toString());
-    return url.queryParameters['run'] == 'true';
+    return queryParams.autoRunEnabled;
   }
 
   bool get shouldOpenConsole {
-    final value = _getQueryParam('open_console');
-    return value == 'true';
+    return queryParams.shouldOpenConsole;
   }
 
   // Whether or not to show the Install button. (defaults to true)
   bool get showInstallButton {
-    final value = _getQueryParam('install_button');
-
-    // Default to true
-    if (value.isEmpty) {
-      return true;
+    if (queryParams.hasShowInstallButton) {
+      return queryParams.showInstallButton;
     }
 
-    return value == 'true';
+    // Default to true
+    return true;
   }
 
   // ID of an API Doc sample that should be loaded into the editors.
-  String get sampleId => _getQueryParam('sample_id');
+  String get sampleId => queryParams.sampleId ?? '';
 
   // An optional channel indicating which version of the API Docs to use when
   // loading a sample. Defaults to the stable channel.
   FlutterSdkChannel get sampleChannel {
-    final channelStr = _getQueryParam('sample_channel')?.toLowerCase();
+    final channelStr = queryParams.sampleChannel?.toLowerCase();
 
     if (channelStr == 'master') {
       return FlutterSdkChannel.master;
@@ -540,19 +525,19 @@ class Embed {
   // GitHub params for loading an exercise from a repo. The first three are
   // required to load something, while the fourth, gh_ref, is an optional branch
   // name or commit SHA.
-  String get githubOwner => _getQueryParam('gh_owner');
+  String get githubOwner => queryParams.githubOwner ?? '';
 
-  String get githubRepo => _getQueryParam('gh_repo');
+  String get githubRepo => queryParams.githubRepo ?? '';
 
-  String get githubPath => _getQueryParam('gh_path');
+  String get githubPath => queryParams.githubPath ?? '';
 
-  String get githubRef => _getQueryParam('gh_ref');
+  String /*?*/ get githubRef => queryParams.githubRef;
 
   bool get githubParamsPresent =>
       githubOwner.isNotEmpty && githubRepo.isNotEmpty && githubPath.isNotEmpty;
 
   void _initNullSafety() {
-    if (QueryParams.hasNullSafety && QueryParams.nullSafety) {
+    if (queryParams.hasNullSafety && queryParams.nullSafety) {
       nullSafetyEnabled = true;
     }
   }
@@ -1023,13 +1008,7 @@ class Embed {
   int get initialSplitPercent {
     const defaultSplitPercentage = 70;
 
-    final url = Uri.parse(window.location.toString());
-    if (!url.queryParameters.containsKey('split')) {
-      return defaultSplitPercentage;
-    }
-
-    var s =
-        int.tryParse(url.queryParameters['split']) ?? defaultSplitPercentage;
+    var s = queryParams.initialSplit ?? defaultSplitPercentage;
 
     // keep the split within the range [5, 95]
     s = math.min(s, 95);
@@ -1139,27 +1118,6 @@ class DisableableButton {
   set hidden(bool value) {
     _element.toggleAttr('hidden', value);
   }
-}
-
-class Octicon {
-  static const prefix = 'octicon-';
-
-  Octicon(this.element);
-
-  final DivElement element;
-
-  String get iconName {
-    return element.classes
-        .firstWhere((s) => s.startsWith(prefix), orElse: () => '');
-  }
-
-  set iconName(String name) {
-    element.classes.removeWhere((s) => s.startsWith(prefix));
-    element.classes.add('$prefix$name');
-  }
-
-  static bool elementIsOcticon(Element el) =>
-      el.classes.any((s) => s.startsWith(prefix));
 }
 
 enum FlashBoxStyle {
@@ -1279,15 +1237,13 @@ class ConsoleExpandController extends Console {
       _initSplitter();
       _splitter.setSizes([60, 40]);
       element.toggleAttr('hidden', false);
-      expandIcon.element.classes.remove('octicon-triangle-up');
-      expandIcon.element.classes.add('octicon-triangle-down');
+      expandIcon.element.innerText = 'expand_more';
       footer.toggleClass('footer-top-border', false);
       unreadCounter.clear();
     } else {
       _splitter.setSizes([100, 0]);
       element.toggleAttr('hidden', true);
-      expandIcon.element.classes.remove('octicon-triangle-down');
-      expandIcon.element.classes.add('octicon-triangle-up');
+      expandIcon.element.innerText = 'expand_less';
       footer.toggleClass('footer-top-border', true);
       try {
         _splitter.destroy();
