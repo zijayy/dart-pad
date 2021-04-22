@@ -22,6 +22,7 @@ import 'core/keys.dart';
 import 'core/modules.dart';
 import 'dart_pad.dart';
 import 'documentation.dart';
+import 'editing/codemirror_options.dart';
 import 'editing/editor.dart';
 import 'elements/analysis_results_controller.dart';
 import 'elements/bind.dart';
@@ -48,25 +49,6 @@ import 'src/util.dart';
 import 'util/detect_flutter.dart';
 import 'util/keymap.dart';
 import 'util/query_params.dart' show queryParams;
-
-const codeMirrorOptions = {
-  'continueComments': {'continueLineComment': false},
-  'autofocus': false,
-  'autoCloseBrackets': true,
-  'matchBrackets': true,
-  'tabSize': 2,
-  'lineWrapping': true,
-  'indentUnit': 2,
-  'cursorHeight': 0.85,
-  'viewportMargin': 100,
-  'extraKeys': {
-    'Cmd-/': 'toggleComment',
-    'Ctrl-/': 'toggleComment',
-    'Tab': 'insertSoftTab'
-  },
-  'hintOptions': {'completeSingle': false},
-  'scrollbarStyle': 'simple',
-};
 
 Playground get playground => _playground;
 
@@ -253,12 +235,15 @@ class Playground implements GistContainer, GistController {
     querySelector('#keyboard-button')
         .onClick
         .listen((_) => _showKeyboardDialog());
-    nullSafetyEnabled = window.localStorage.containsKey('null_safety') &&
-        window.localStorage['null_safety'] == 'true';
 
-    // Override if a query parameter is provided
+    // Query params have higher precedence than local storage
     if (queryParams.hasNullSafety) {
       nullSafetyEnabled = queryParams.nullSafety;
+    } else if (window.localStorage.containsKey('null_safety')) {
+      nullSafetyEnabled = window.localStorage['null_safety'] == 'true';
+    } else {
+      // Default to null safety
+      nullSafetyEnabled = true;
     }
 
     nullSafetySwitch = MDCSwitch(querySelector('#null-safety-switch'))
@@ -946,10 +931,10 @@ class Playground implements GistContainer, GistController {
     _leftConsole.showOutput(message, error: error);
     _rightConsole.showOutput(message, error: error);
 
-    // If there's no tabs visible or the console is not being displayed,
-    // increment the counter
+    // If there are no tabs visible or the console is not being displayed,
+    // increment the counter.
     if (tabExpandController == null ||
-        tabExpandController?.state != TabState.console) {
+        tabExpandController.state != TabState.console) {
       unreadConsoleCounter.increment();
     }
   }
@@ -977,39 +962,43 @@ class Playground implements GistContainer, GistController {
 
     _layout = layout;
 
-    if (layout == Layout.dart) {
-      _frame.hidden = true;
-      editorPanelFooter.setAttr('hidden');
-      _disposeOutputPanelTabs();
-      _rightDocPanel.attributes.remove('hidden');
-      _rightConsoleElement.attributes.remove('hidden');
-      webTabBar.setAttr('hidden');
-      webLayoutTabController.selectTab('dart');
-      _initRightSplitter();
-      editorPanelHeader.setAttr('hidden');
-      webOutputLabel.setAttr('hidden');
-    } else if (layout == Layout.html) {
-      _disposeRightSplitter();
-      _frame.hidden = false;
-      editorPanelFooter.clearAttr('hidden');
-      _initOutputPanelTabs();
-      _rightDocPanel.setAttribute('hidden', '');
-      _rightConsoleElement.setAttribute('hidden', '');
-      webTabBar.toggleAttr('hidden', false);
-      webLayoutTabController.selectTab('dart');
-      editorPanelHeader.clearAttr('hidden');
-      webOutputLabel.setAttr('hidden');
-    } else if (layout == Layout.flutter) {
-      _disposeRightSplitter();
-      _frame.hidden = false;
-      editorPanelFooter.clearAttr('hidden');
-      _initOutputPanelTabs();
-      _rightDocPanel.setAttribute('hidden', '');
-      _rightConsoleElement.setAttribute('hidden', '');
-      webTabBar.setAttr('hidden');
-      webLayoutTabController.selectTab('dart');
-      editorPanelHeader.setAttr('hidden');
-      webOutputLabel.clearAttr('hidden');
+    switch (layout) {
+      case Layout.dart:
+        _frame.hidden = true;
+        editorPanelFooter.setAttr('hidden');
+        _disposeOutputPanelTabs();
+        _rightDocPanel.attributes.remove('hidden');
+        _rightConsoleElement.attributes.remove('hidden');
+        webTabBar.setAttr('hidden');
+        webLayoutTabController.selectTab('dart');
+        _initRightSplitter();
+        editorPanelHeader.setAttr('hidden');
+        webOutputLabel.setAttr('hidden');
+        break;
+      case Layout.html:
+        _disposeRightSplitter();
+        _frame.hidden = false;
+        editorPanelFooter.clearAttr('hidden');
+        _initOutputPanelTabs();
+        _rightDocPanel.setAttribute('hidden', '');
+        _rightConsoleElement.setAttribute('hidden', '');
+        webTabBar.toggleAttr('hidden', false);
+        webLayoutTabController.selectTab('dart');
+        editorPanelHeader.clearAttr('hidden');
+        webOutputLabel.setAttr('hidden');
+        break;
+      case Layout.flutter:
+        _disposeRightSplitter();
+        _frame.hidden = false;
+        editorPanelFooter.clearAttr('hidden');
+        _initOutputPanelTabs();
+        _rightDocPanel.setAttribute('hidden', '');
+        _rightConsoleElement.setAttribute('hidden', '');
+        webTabBar.setAttr('hidden');
+        webLayoutTabController.selectTab('dart');
+        editorPanelHeader.setAttr('hidden');
+        webOutputLabel.clearAttr('hidden');
+        break;
     }
   }
 
