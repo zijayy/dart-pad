@@ -1,8 +1,7 @@
 @import 'package:dart_pad/scss/colors';
-@import 'package:dart_pad/scss/variables';
+@import 'package:dart_pad/scss/layout';
 @import 'package:dart_pad/scss/shared';
-
-@import 'layout';
+@import 'package:dart_pad/scss/variables';
 
 // Material Design Web theme colors. Must be imported before importing
 // material-components-web.scss.
@@ -12,10 +11,8 @@ $mdc-theme-background: $playground-background-color;
 $mdc-theme-surface: $playground-background-color;
 $mdc-theme-error: $dark-red;
 
-// Layout constants
-$doc-console-padding: 8px 24px 8px 24px;
-
 @import 'package:mdc_web/material-components-web';
+@import 'shared';
 
 header {
   background-color: $playground-header-background-color;
@@ -105,6 +102,7 @@ section.main-section {
 #steps-panel {
   @include layout-vertical();
   @include layout-center();
+  min-width: 500px;
 }
 
 #markdown-content {
@@ -115,6 +113,50 @@ section.main-section {
   > * {
     margin-left: 12px;
     margin-right: 12px;
+  }
+
+  // Add a border
+  table, th, td {
+    border-collapse: collapse;
+    border-spacing: 0;
+    border: 1px solid $workshop-table-border-color;
+  }
+
+  table {
+    font-size: 16px;
+    thead {
+      display: table-header-group;
+      vertical-align: middle;
+    }
+    
+    td, th {
+      padding: 6px 14px
+    }
+    
+    tr {
+      background-color: $workshop-table-bg-color;
+      &:nth-child(2n) {
+        background-color: lighten($workshop-table-bg-color, 3%);
+      }
+    }
+  }
+
+  // Inline <code> elements, not code blocks.
+  code:not(pre code) {
+    background-color: $workshop-snippet-bg-color;
+    color: opacify($dark-blue, 0.75);
+    padding: 4px 6px 4px 6px;
+    border-radius: 4px;
+  }
+
+  p {
+    font-size: 16px;
+    color: $dark-editor-text;
+    line-height: 28px;
+  }
+
+  img {
+    width: 100%;
   }
 }
 
@@ -265,7 +307,6 @@ body>footer {
   }
 }
 
-
 // Splitter
 .gutter {
   background-color: $dark-gutter-background-color;
@@ -287,3 +328,19 @@ body>footer {
   width: 100%;
 }
 
+// Editor Tabs
+.editor-tab {
+  @include mdc-button-ink-color(#f8f9fa);
+  color: $label-color;
+  &.active {
+    color: $dark-blue;
+  }
+}
+
+.border-top {
+  border-top: 6px solid $dark-gutter-background-color !important;
+}
+
+#editor-panel-close-button {
+  @include mdc-icon-button-size(16px, 16px, 8px);
+}

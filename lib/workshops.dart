@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:html' hide Console;
 
 import 'package:dart_pad/context.dart';
+import 'package:dart_pad/src/util.dart';
 import 'package:dart_pad/util/detect_flutter.dart';
 import 'package:dart_pad/util/query_params.dart';
-import 'package:logging/logging.dart';
 import 'package:markdown/markdown.dart' as markdown;
-import 'package:mdc_web/mdc_web.dart';
 import 'package:split/split.dart';
 import 'package:stream_transform/stream_transform.dart';
 
@@ -23,7 +22,7 @@ import 'elements/console.dart';
 import 'elements/counter.dart';
 import 'elements/dialog.dart';
 import 'elements/elements.dart';
-import 'elements/material_tab_controller.dart';
+import 'elements/tab_expand_controller.dart';
 import 'hljs.dart' as hljs;
 import 'modules/codemirror_module.dart';
 import 'modules/dart_pad_module.dart';
@@ -31,64 +30,76 @@ import 'modules/dartservices_module.dart';
 import 'services/common.dart';
 import 'services/dartservices.dart';
 import 'services/execution_iframe.dart';
+import 'sharing/editor_ui.dart';
 import 'src/ga.dart';
-import 'util/keymap.dart';
 import 'workshops/workshops.dart';
 
 WorkshopUi _workshopUi;
 
 WorkshopUi get workshopUi => _workshopUi;
 
-final Logger _logger = Logger('dartpad');
+final NodeValidator _htmlValidator = PermissiveNodeValidator();
 
 void init() {
   _workshopUi = WorkshopUi();
 }
 
-class WorkshopUi {
+class WorkshopUi extends EditorUi {
   WorkshopState _workshopState;
   Splitter splitter;
   Splitter rightSplitter;
-  Editor editor;
   DElement stepLabel;
   DElement previousStepButton;
   DElement nextStepButton;
   Console _console;
-  MDCButton runButton;
   MDCButton showSolutionButton;
-  MaterialTabController consolePanelTabController;
   Counter unreadConsoleCounter;
-  Dialog dialog;
   DocHandler docHandler;
-  Future _analysisRequest;
-  DartSourceProvider sourceProvider;
+  @override
+  ContextBase context;
   MDCButton formatButton;
-  DBusyLight busyLight;
-  AnalysisResultsController analysisResultsController;
+  TabExpandController tabExpandController;
+  MDCButton closePanelButton;
+  MDCButton editorUiOutputTab;
+  MDCButton editorConsoleTab;
+  MDCButton editorDocsTab;
+  final _nullSafetyEnabled = true;
 
   WorkshopUi() {
     _init();
   }
 
+  DivElement get _editorPanel => querySelector('#editor-panel') as DivElement;
+
   DivElement get _editorHost => querySelector('#editor-host') as DivElement;
 
+  IFrameElement get _frame => querySelector('#frame') as IFrameElement;
+
   DivElement get _consoleElement =>
-      querySelector('#output-panel-content') as DivElement;
+      querySelector('#console-panel') as DivElement;
 
   DivElement get _documentationElement =>
       querySelector('#doc-panel') as DivElement;
 
-  IFrameElement get _frame => querySelector('#frame') as IFrameElement;
+  DivElement get _editorPanelFooter =>
+      querySelector('#editor-panel-footer') as DivElement;
+
+  @override
+  bool get nullSafetyEnabled => _nullSafetyEnabled;
+
+  @override
+  set nullSafetyEnabled(bool v) {
+    throw Exception('setting null safety in workshops is not supported.');
+  }
 
   Future<void> _init() async {
-    _initDialogs();
     await _loadWorkshop();
     _initBusyLights();
     _initHeader();
     _updateInstructions();
     await _initModules();
     _initWorkshopUi();
-    _initKeyBindings();
+    initKeyBindings();
     _initEditor();
     _initSplitters();
     _initStepButtons();
@@ -96,8 +107,8 @@ class WorkshopUi {
     _initConsoles();
     _initButtons();
     _updateCode();
-    _initTabs();
     _focusEditor();
+    _initOutputPanelTabs();
   }
 
   Future<void> _initModules() async {
@@ -108,10 +119,6 @@ class WorkshopUi {
     modules.register(CodeMirrorModule());
 
     await modules.start();
-  }
-
-  void _initDialogs() {
-    dialog = Dialog();
   }
 
   void _initBusyLights() {
@@ -126,13 +133,13 @@ class WorkshopUi {
           ..mode = 'dart'
           ..showLineNumbers = true;
 
-    sourceProvider = WorkshopDartSourceProvider(editor);
-    docHandler = DocHandler(editor, sourceProvider);
+    context = WorkshopDartSourceProvider(editor);
+    docHandler = DocHandler(editor, context);
 
     editor.document.onChange.listen((_) => busyLight.on());
     editor.document.onChange
         .debounce(Duration(milliseconds: 1250))
-        .listen((_) => _performAnalysis());
+        .listen((_) => performAnalysis());
 
     editorFactory.registerCompleter(
         'dart', DartCompleter(dartServices, editor.document));
@@ -150,9 +157,9 @@ class WorkshopUi {
 
   void _initWorkshopUi() {
     // Set up the iframe.
-    deps[ExecutionService] = ExecutionServiceIFrame(_frame);
-    executionService.onStdout.listen(_showOutput);
-    executionService.onStderr.listen((m) => _showOutput(m, error: true));
+    executionService = ExecutionServiceIFrame(_frame);
+    executionService.onStdout.listen(showOutput);
+    executionService.onStderr.listen((m) => showOutput(m, error: true));
     // Set up Google Analytics.
     deps[Analytics] = Analytics();
 
@@ -171,12 +178,11 @@ class WorkshopUi {
 
     querySelector('#keyboard-button')
         .onClick
-        .listen((_) => _showKeyboardDialog());
+        .listen((_) => showKeyboardDialog());
   }
 
-  void _initKeyBindings() {
-    // set up key bindings
-    keys.bind(['ctrl-enter'], _handleRun, 'Run');
+  @override
+  void initKeyBindings() {
     keys.bind(['f1'], () {
       ga.sendEvent('main', 'help');
       docHandler.generateDoc([_documentationElement]);
@@ -190,9 +196,6 @@ class WorkshopUi {
       editor.showCompletions();
     }, 'Completion');
 
-    keys.bind(['shift-ctrl-/', 'shift-macctrl-/'], () {
-      _showKeyboardDialog();
-    }, 'Keyboard Shortcuts');
     keys.bind(['shift-ctrl-f', 'shift-macctrl-f'], () {
       _format();
     }, 'Format');
@@ -204,6 +207,8 @@ class WorkshopUi {
       }
       _handleAutoCompletion(e);
     });
+
+    super.initKeyBindings();
   }
 
   void _handleAutoCompletion(KeyboardEvent e) {
@@ -224,7 +229,7 @@ class WorkshopUi {
   }
 
   Future<void> _loadWorkshop() async {
-    var fetcher = await _getFetcher();
+    var fetcher = _createWorkshopFetcher();
     _workshopState = WorkshopState(await fetcher.fetch());
   }
 
@@ -232,17 +237,10 @@ class WorkshopUi {
     var stepsPanel = querySelector('#steps-panel');
     var rightPanel = querySelector('#right-panel');
     var editorPanel = querySelector('#editor-panel');
-    var outputPanel = querySelector('#output-panel');
+
     splitter = flexSplit(
       [stepsPanel, rightPanel],
       horizontal: true,
-      gutterSize: 6,
-      sizes: const [50, 50],
-      minSize: [100, 100],
-    );
-    rightSplitter = flexSplit(
-      [editorPanel, outputPanel],
-      horizontal: false,
       gutterSize: 6,
       sizes: const [50, 50],
       minSize: [100, 100],
@@ -289,13 +287,25 @@ class WorkshopUi {
 
   void _initButtons() {
     runButton = MDCButton(querySelector('#run-button') as ButtonElement)
-      ..onClick.listen((_) => _handleRun());
+      ..onClick.listen((_) => handleRun());
 
     showSolutionButton =
         MDCButton(querySelector('#show-solution-btn') as ButtonElement)
           ..onClick.listen((_) => _handleShowSolution());
     formatButton = MDCButton(querySelector('#format-button') as ButtonElement)
       ..onClick.listen((_) => _format());
+    closePanelButton = MDCButton(
+        querySelector('#editor-panel-close-button') as ButtonElement,
+        isIcon: true);
+    editorUiOutputTab =
+        MDCButton(querySelector('#editor-panel-ui-tab') as ButtonElement);
+    editorConsoleTab =
+        MDCButton(querySelector('#editor-panel-console-tab') as ButtonElement);
+    editorDocsTab =
+        MDCButton(querySelector('#editor-panel-docs-tab') as ButtonElement);
+    if (!shouldCompileDDC) {
+      editorUiOutputTab.setAttr('hidden');
+    }
   }
 
   void _updateSolutionButton() {
@@ -311,48 +321,15 @@ class WorkshopUi {
     editor.document.updateValue(_workshopState.currentStep.snippet);
   }
 
-  void _initTabs() {
-    var consoleTabBar = querySelector('#web-tab-bar');
-    consolePanelTabController = MaterialTabController(MDCTabBar(consoleTabBar));
-    for (var name in ['ui-output', 'console', 'documentation']) {
-      consolePanelTabController.registerTab(
-          TabElement(querySelector('#$name-tab'), name: name, onSelect: () {
-        _changeConsoleTab(name);
-      }));
-    }
-
-    // Set the current tab to UI Output or console, depending on whether this is
-    // Dart or Flutter workshop.
-    if (_workshopState.workshop.type == WorkshopType.dart) {
-      querySelector('#ui-output-tab').hidden = true;
-      consolePanelTabController.selectTab('console');
-    } else {
-      consolePanelTabController.selectTab('ui-output');
-    }
-  }
-
-  void _changeConsoleTab(String name) {
-    if (name == 'ui-output') {
-      _frame.hidden = false;
-      _consoleElement.hidden = true;
-      _documentationElement.hidden = true;
-    } else if (name == 'console') {
-      _frame.hidden = true;
-      _consoleElement.hidden = false;
-      _documentationElement.hidden = true;
-    } else if (name == 'documentation') {
-      _frame.hidden = true;
-      _consoleElement.hidden = true;
-      _documentationElement.hidden = false;
-    }
-  }
-
   void _updateInstructions() {
     var div = querySelector('#markdown-content');
     div.children.clear();
-    div.innerHtml =
-        markdown.markdownToHtml(_workshopState.currentStep.instructions);
+    div.setInnerHtml(
+        markdown.markdownToHtml(_workshopState.currentStep.instructions,
+            blockSyntaxes: [markdown.TableSyntax()]),
+        validator: _htmlValidator);
     hljs.highlightAll();
+    div.scrollTop = 0;
   }
 
   void _updateStepButtons() {
@@ -361,7 +338,7 @@ class WorkshopUi {
     nextStepButton.toggleAttr('disabled', !_workshopState.hasNextStep);
   }
 
-  Future<WorkshopFetcher> _getFetcher() async {
+  WorkshopFetcher _createWorkshopFetcher() {
     var webServer = queryParams.webServer;
     if (webServer != null && webServer.isNotEmpty) {
       var uri = Uri.parse(webServer);
@@ -386,133 +363,8 @@ class WorkshopUi {
         '"gh_owner", "gh_repo", "gh_ref", and "gh_path"');
   }
 
-  void _showKeyboardDialog() {
-    dialog.showOk('Keyboard shortcuts', keyMapToHtml(keys.inverseBindings));
-  }
-
-  void _handleRun() async {
-    ga.sendEvent('main', 'run');
-    runButton.disabled = true;
-
-    var compilationTimer = Stopwatch()..start();
-
-    final compileRequest = CompileRequest()..source = editor.document.value;
-
-    try {
-      if (_workshopState.workshop.type == WorkshopType.flutter) {
-        final response = await dartServices
-            .compileDDC(compileRequest)
-            .timeout(longServiceCallTimeout);
-
-        ga.sendTiming(
-          'action-perf',
-          'compilation-e2e',
-          compilationTimer.elapsedMilliseconds,
-        );
-
-        _clearOutput();
-
-        await executionService.execute(
-          '',
-          '',
-          response.result,
-          modulesBaseUrl: response.modulesBaseUrl,
-          addRequireJs: true,
-          addFirebaseJs: hasFirebaseContent(compileRequest.source),
-        );
-      } else {
-        final response = await dartServices
-            .compile(compileRequest)
-            .timeout(longServiceCallTimeout);
-
-        ga.sendTiming(
-          'action-perf',
-          'compilation-e2e',
-          compilationTimer.elapsedMilliseconds,
-        );
-
-        _clearOutput();
-
-        await executionService.execute(
-          '',
-          '',
-          response.result,
-        );
-      }
-    } catch (e) {
-      ga.sendException('${e.runtimeType}');
-      final message = e is ApiRequestError ? e.message : '$e';
-      _showSnackbar('Error compiling to JavaScript');
-      _clearOutput();
-      _showOutput('Error compiling to JavaScript:\n$message', error: true);
-    } finally {
-      runButton.disabled = false;
-    }
-  }
-
-  /// Perform static analysis of the source code. Return whether the code
-  /// analyzed cleanly (had no errors or warnings).
-  Future<bool> _performAnalysis() {
-    var input = SourceRequest()..source = sourceProvider.dartSource;
-
-    var lines = Lines(input.source);
-
-    var request = dartServices.analyze(input).timeout(serviceCallTimeout);
-    _analysisRequest = request;
-
-    return request.then((AnalysisResults result) {
-      // Discard if we requested another analysis.
-      if (_analysisRequest != request) return false;
-
-      // Discard if the document has been mutated since we requested analysis.
-      if (input.source != sourceProvider.dartSource) return false;
-
-      busyLight.reset();
-
-      _displayIssues(result.issues);
-
-      editor.document.setAnnotations(result.issues.map((AnalysisIssue issue) {
-        var startLine = lines.getLineForOffset(issue.charStart);
-        var endLine =
-            lines.getLineForOffset(issue.charStart + issue.charLength);
-
-        var start = Position(
-            startLine, issue.charStart - lines.offsetForLine(startLine));
-        var end = Position(
-            endLine,
-            issue.charStart +
-                issue.charLength -
-                lines.offsetForLine(startLine));
-
-        return Annotation(issue.kind, issue.message, issue.line,
-            start: start, end: end);
-      }).toList());
-
-      var hasErrors = result.issues.any((issue) => issue.kind == 'error');
-      var hasWarnings = result.issues.any((issue) => issue.kind == 'warning');
-
-      return hasErrors == false && hasWarnings == false;
-    }).catchError((e) {
-      if (e is! TimeoutException) {
-        final message = e is ApiRequestError ? e.message : '$e';
-
-        _displayIssues([
-          AnalysisIssue()
-            ..kind = 'error'
-            ..line = 1
-            ..message = message
-        ]);
-      } else {
-        _logger.severe(e);
-      }
-
-      editor.document.setAnnotations([]);
-      busyLight.reset();
-    });
-  }
-
   Future<void> _format() {
-    var originalSource = sourceProvider.dartSource;
+    var originalSource = context.dartSource;
     var input = SourceRequest()..source = originalSource;
     formatButton.disabled = true;
 
@@ -522,43 +374,65 @@ class WorkshopUi {
       formatButton.disabled = false;
 
       if (result.newString == null || result.newString.isEmpty) {
-        _logger.fine('Format returned null/empty result');
+        logger.fine('Format returned null/empty result');
         return;
       }
 
       if (originalSource != result.newString) {
         editor.document.updateValue(result.newString);
-        _showSnackbar('Format successful.');
+        showSnackbar('Format successful.');
       } else {
-        _showSnackbar('No formatting changes.');
+        showSnackbar('No formatting changes.');
       }
     }).catchError((e) {
       busyLight.reset();
       formatButton.disabled = false;
-      _logger.severe(e);
+      logger.severe(e);
     });
+  }
+
+  void _initOutputPanelTabs() {
+    if (tabExpandController != null) {
+      return;
+    }
+
+    tabExpandController = TabExpandController(
+      uiOutputButton: shouldCompileDDC ? editorUiOutputTab : null,
+      consoleButton: editorConsoleTab,
+      docsButton: editorDocsTab,
+      closeButton: closePanelButton,
+      iframeElement: _frame,
+      docsElement: _documentationElement,
+      consoleElement: _consoleElement,
+      topSplit: _editorPanel,
+      bottomSplit: _editorPanelFooter,
+      unreadCounter: unreadConsoleCounter,
+    );
   }
 
   void _focusEditor() {
     editor.focus();
   }
 
-  void _clearOutput() {
+  @override
+  bool get shouldCompileDDC =>
+      _workshopState.workshop.type == WorkshopType.flutter;
+
+  @override
+  bool get shouldAddFirebaseJs => hasFirebaseContent(editor.document.value);
+
+  @override
+  void clearOutput() {
     _console.clear();
     unreadConsoleCounter.clear();
   }
 
-  void _showOutput(String message, {bool error = false}) {
+  @override
+  void showOutput(String message, {bool error = false}) {
     _console.showOutput(message, error: error);
-    if (consolePanelTabController.selectedTab.name != 'console') {
+    if (tabExpandController.state != TabState.console) {
       unreadConsoleCounter.increment();
     }
-  }
-
-  void _showSnackbar(String message) {
-    var div = querySelector('.mdc-snackbar');
-    var snackbar = MDCSnackbar(div)..labelText = message;
-    snackbar.open();
   }
 
   Future<void> _handleShowSolution() async {
@@ -570,10 +444,6 @@ class WorkshopUi {
       editor.document.updateValue(_workshopState.currentStep.solution);
       showSolutionButton.disabled = true;
     }
-  }
-
-  void _displayIssues(List<AnalysisIssue> issues) {
-    analysisResultsController.display(issues);
   }
 
   void _jumpTo(int line, int charStart, int charLength, {bool focus = false}) {
@@ -623,13 +493,19 @@ class WorkshopState {
   bool get hasPreviousStep => _currentStepIndex > 0;
 }
 
-class WorkshopDartSourceProvider implements DartSourceProvider {
+class WorkshopDartSourceProvider implements ContextBase {
   final Editor editor;
 
   WorkshopDartSourceProvider(this.editor);
 
   @override
   String get dartSource => editor.document.value;
+
+  @override
+  String get htmlSource => '';
+
+  @override
+  String get cssSource => '';
 
   @override
   bool get isFocused => true;
