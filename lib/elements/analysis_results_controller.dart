@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:html';
 
+import 'package:dart_pad/elements/button.dart';
 import 'package:dart_pad/elements/elements.dart';
 import 'package:dart_pad/services/dartservices.dart';
 import 'package:mdc_web/mdc_web.dart';
@@ -23,6 +24,7 @@ class AnalysisResultsController {
   final DElement flash;
   final DElement message;
   final DElement toggle;
+  final MDCSnackbar snackbar;
   late bool _flashHidden;
 
   final StreamController<Location> _onClickController =
@@ -30,7 +32,8 @@ class AnalysisResultsController {
 
   Stream<Location> get onItemClicked => _onClickController.stream;
 
-  AnalysisResultsController(this.flash, this.message, this.toggle) {
+  AnalysisResultsController(
+      this.flash, this.message, this.toggle, this.snackbar) {
     // Show issues by default, but hide the flash element (otherwise an empty
     // flash container will be shown). display() will un-hide the element when
     // there are issues to display.
@@ -116,6 +119,24 @@ class AnalysisResultsController {
 
     elem.children.add(columnElem);
 
+    var copyButton = MDCButton(ButtonElement(), isIcon: true);
+    copyButton.buttonElement.setInnerHtml('content_copy');
+    copyButton
+      ..toggleClass('mdc-icon-button', true)
+      ..toggleClass('mdc-button-small', true)
+      ..toggleClass('material-icons', true);
+
+    copyButton.onClick.listen((event) async {
+      try {
+        await window.navigator.clipboard?.writeText(message);
+        snackbar.showMessage('Copied to clipboard successfully!');
+      } catch (_) {
+        snackbar.showMessage('Failed to copy');
+      }
+    });
+
+    elem.children.add(copyButton.element);
+
     elem.onClick.listen((_) {
       _onClickController.add(Location(
           line: issue.line,
@@ -177,4 +198,11 @@ class Location {
     required this.charStart,
     required this.charLength,
   });
+}
+
+extension SnackbarExtension on MDCSnackbar {
+  void showMessage(String message) {
+    labelText = message;
+    open();
+  }
 }

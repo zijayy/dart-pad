@@ -81,6 +81,10 @@ a {
   margin: 0;
 }
 
+.issue > .issue-column {
+  flex: 1;
+}
+
 // Keyboard button
 #keyboard-button {
   cursor: pointer;
@@ -317,6 +321,16 @@ a {
   color: $dark-teal;
   background-color: fade_out($dark-teal, 0.5);
   border-radius: 20px;
+}
+
+// Channel selection menu
+.channel-item-group {
+  @include layout-horizontal();
+  @include layout-center();
+}
+
+.channel-menu-right {
+  @include layout-flex();
 }
 
 // Misc
