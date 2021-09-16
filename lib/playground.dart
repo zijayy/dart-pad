@@ -966,6 +966,9 @@ class Playground extends EditorUi implements GistContainer, GistController {
     queryParams.channel = channel;
     (deps[DartservicesApi] as DartservicesApi).rootUrl =
         Channel._urlMapping[channel]!;
+
+    // Clear the analysis issues panel.
+    displayIssues([]);
     updateVersions();
     performAnalysis();
 
