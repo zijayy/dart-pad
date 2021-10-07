@@ -569,6 +569,11 @@ class Embed extends EditorUi {
     deps[GistLoader] = GistLoader.defaultFilters();
     deps[Analytics] = Analytics();
 
+    var channel = queryParams.channel;
+    if (Channel.urlMapping.keys.contains(channel)) {
+      dartServices.rootUrl = Channel.urlMapping[channel]!;
+    }
+
     context = EmbedContext(
         userCodeEditor, testEditor, solutionEditor, htmlEditor, cssEditor);
 
