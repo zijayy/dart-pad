@@ -63,6 +63,20 @@ addFirebase = function () {
         // * https://github.com/dart-lang/dart-pad/issues/1946,
         // * https://github.com/firebase/firebase-js-sdk/issues/123.
         firebase.database.INTERNAL.forceWebSockets();
+
+        // Temporary and a hack, to play with apps beyond
+        // https://github.com/FirebaseExtended/flutterfire/issues/3962.
+        var firebaseConfig = {
+            apiKey: "AIzaSyAhE5iTdU1MflQxb4_M_uHiXJR9EC_mE_I",
+            authDomain: "nanochat.firebaseapp.com",
+            //databaseURL: "https://[YOUR_PROJECT].firebaseio.com",
+            projectId: "firebase-nanochat",
+            //storageBucket: "[YOUR_PROJECT].appspot.com",
+            //messagingSenderId: "...",
+            //appId: "1:...:web:...",
+            //measurementId: "G-...",
+        };
+        firebase.initializeApp(firebaseConfig);
     });
     addScript('firestore', 'https://www.gstatic.com/firebasejs/8.4.1/firebase-firestore.js');
 }
