@@ -207,10 +207,11 @@ class _CodeMirrorEditor extends Editor {
 
   @override
   bool get completionActive {
-    if (cm.jsProxy!['state']['completionActive'] == null) {
-      return false;
+    final completionActive = _jsProxyState!['completionActive'];
+    if (completionActive is Map) {
+      return completionActive['widget'] != null;
     } else {
-      return cm.jsProxy!['state']['completionActive']['widget'] != null;
+      return false;
     }
   }
 
@@ -234,7 +235,7 @@ class _CodeMirrorEditor extends Editor {
   set theme(String str) => cm.setTheme(str);
 
   @override
-  bool get hasFocus => cm.jsProxy!['state']['focused'] as bool;
+  bool get hasFocus => _jsProxyState?['focused'] == true;
 
   @override
   Stream<html.MouseEvent> get onMouseDown => cm.onMouseDown;
@@ -245,8 +246,8 @@ class _CodeMirrorEditor extends Editor {
     if (position == null) {
       js = cm.call('cursorCoords') as JsObject?;
     } else {
-      js = cm.callArg('cursorCoords', _document._posToPos(position).toProxy())
-          as JsObject?;
+      final proxyPos = _document._posToPos(position).toProxy();
+      js = cm.callArg('cursorCoords', proxyPos) as JsObject?;
     }
     return Point(js!['left'] as num, js['top'] as num);
   }
@@ -279,6 +280,10 @@ class _CodeMirrorEditor extends Editor {
   void dispose() {
     _instances.remove(cm.jsProxy);
   }
+
+  JsObject? get _jsProxy => cm.jsProxy;
+
+  JsObject? get _jsProxyState => _jsProxy?['state'] as JsObject?;
 }
 
 class _CodeMirrorDocument extends Document<_CodeMirrorEditor> {
@@ -343,16 +348,16 @@ class _CodeMirrorDocument extends Document<_CodeMirrorEditor> {
 
   @override
   void setAnnotations(List<Annotation> annotations) {
-    for (var marker in doc!.getAllMarks()) {
+    for (final marker in doc!.getAllMarks()) {
       marker.clear();
     }
 
-    for (var widget in widgets) {
+    for (final widget in widgets) {
       widget.clear();
     }
     widgets.clear();
 
-    for (var e in nodes) {
+    for (final e in nodes) {
       e.parent!.children.remove(e);
     }
     nodes.clear();
@@ -362,7 +367,7 @@ class _CodeMirrorDocument extends Document<_CodeMirrorEditor> {
 
     var lastLine = -1;
 
-    for (var an in annotations) {
+    for (final an in annotations) {
       // Create in-line squiggles.
       doc!.markText(_posToPos(an.start), _posToPos(an.end),
           className: 'squiggle-${an.type}', title: an.message);
