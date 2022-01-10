@@ -102,6 +102,7 @@ class WorkshopUi extends EditorUi {
     _initConsoles();
     _initButtons();
     _updateCode();
+    _updateSolutionButton();
     _focusEditor();
     _initOutputPanelTabs();
   }
@@ -419,13 +420,19 @@ class WorkshopUi extends EditorUi {
   }
 
   Future<void> _handleShowSolution() async {
-    final result = await dialog.showOkCancel(
-        'Show solution',
-        'Are you sure you want to show the solution? Your changes for this '
-            'step will be lost.');
-    if (result == DialogResult.ok) {
-      editor.document.updateValue(_workshopState.currentStep.solution);
-      showSolutionButton.disabled = true;
+    final solution = _workshopState.currentStep.solution;
+
+    if (solution == null) {
+      showSnackbar('This step has no solution.');
+    } else {
+      final result = await dialog.showOkCancel(
+          'Show solution',
+          'Are you sure you want to show the solution? Your changes for this '
+              'step will be lost.');
+      if (result == DialogResult.ok) {
+        editor.document.updateValue(solution);
+        showSolutionButton.disabled = true;
+      }
     }
   }
 
