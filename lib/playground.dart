@@ -35,6 +35,7 @@ import 'modules/codemirror_module.dart';
 import 'modules/dart_pad_module.dart';
 import 'modules/dartservices_module.dart';
 import 'playground_context.dart';
+import 'search_controller.dart';
 import 'services/common.dart';
 import 'services/dartservices.dart';
 import 'services/execution_iframe.dart';
@@ -53,6 +54,9 @@ final Logger _logger = Logger('dartpad');
 class Playground extends EditorUi implements GistContainer, GistController {
   final MutableGist _editableGist = MutableGist(Gist());
   final GistStorage _gistStorage = GistStorage();
+  final MDCButton _consoleClearLeftButton = MDCButton(
+      querySelector('#left-console-clear-button') as ButtonElement,
+      isIcon: true);
   final MDCButton _formatButton =
       MDCButton(querySelector('#format-button') as ButtonElement);
   final MDCButton _editorConsoleTab =
@@ -67,15 +71,17 @@ class Playground extends EditorUi implements GistContainer, GistController {
   final DElement _editorPanelFooter =
       DElement(querySelector('#editor-panel-footer') as DivElement);
   final NewPadDialog _newPadDialog = NewPadDialog();
+  late final MDCMenu _samplesMenu = _buildSamplesMenu();
   final DElement _titleElement =
       DElement(querySelector('header .header-gist-name')!);
-  late final MaterialTabController _webLayoutTabController = _initTabs();
+  late final MaterialTabController _webLayoutTabController = _buildTabs();
   final DElement _webTabBar = DElement(querySelector('#web-tab-bar')!);
   final DElement _webOutputLabel =
       DElement(querySelector('#web-output-label')!);
   MDCMenu? _channelsMenu;
   String? _gistIdInProgress;
 
+  late final SearchController _searchController;
   late Splitter _rightSplitter;
   bool _rightSplitterConfigured = false;
   TabExpandController? _tabExpandController;
@@ -108,10 +114,9 @@ class Playground extends EditorUi implements GistContainer, GistController {
     _initGistStorage();
     _initLayoutDetection();
     _initButtons();
-    _initSamplesMenu();
     _initMoreMenu();
     _initSplitters();
-    _initTabs();
+    _initChannelsMenu();
     showHome();
   }
 
@@ -139,8 +144,6 @@ class Playground extends EditorUi implements GistContainer, GistController {
 
   ButtonElement get _samplesDropdownButton =>
       querySelector('#samples-dropdown-button') as ButtonElement;
-
-  MDCMenu get _samplesMenu => _initSamplesMenu();
 
   ButtonElement get _channelsDropdownButton =>
       querySelector('#channels-dropdown-button') as ButtonElement;
@@ -189,6 +192,11 @@ class Playground extends EditorUi implements GistContainer, GistController {
         .onClick
         .listen((_) => _showResetDialog());
     _formatButton.onClick.listen((_) => _format());
+    _consoleClearLeftButton.onClick.listen((_) => clearOutput());
+    MDCButton(querySelector('#right-console-clear-button') as ButtonElement,
+            isIcon: true)
+        .onClick
+        .listen((_) => clearOutput());
     MDCButton(querySelector('#install-button') as ButtonElement)
         .onClick
         .listen((_) => _showInstallPage());
@@ -208,17 +216,18 @@ class Playground extends EditorUi implements GistContainer, GistController {
         ?.onClick
         .listen((_) => showPackageVersionsDialog());
 
-    _initChannelsMenu();
     MDCButton(_channelsDropdownButton)
         .onClick
         .listen((e) => _toggleMenu(_channelsMenu));
+
+    _searchController = SearchController(editorFactory, editor, snackbar);
   }
 
-  MDCMenu _initSamplesMenu() {
+  MDCMenu _buildSamplesMenu() {
     final element = querySelector('#samples-menu')!;
     element.children.clear();
 
-    final samples = [
+    const samples = [
       Sample('e75b493dae1287757c5e1d77a0dc73f1', 'Counter', Layout.flutter),
       Sample('5c0e154dd50af4a9ac856908061291bc', 'Sunflower', Layout.flutter),
       Sample('a1d5666d6b54a45eb170b897895cf757', 'Draggables & physics',
@@ -340,7 +349,11 @@ class Playground extends EditorUi implements GistContainer, GistController {
           ],
       ])
         ..classes.add('channel-item');
-      listElement.children.add(menuElement);
+
+      // The dev channel is hidden unless it's selected via a query parameter.
+      if (!channel.hidden || currentChannel == channel.name) {
+        listElement.children.add(menuElement);
+      }
     }
 
     return element;
@@ -351,6 +364,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
       Channel.fromVersion('stable'),
       Channel.fromVersion('beta'),
       Channel.fromVersion('old'),
+      Channel.fromVersion('dev', hidden: true),
     ]);
 
     final element = _buildChannelsMenu(channels);
@@ -445,6 +459,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
     _tabExpandController = TabExpandController(
       consoleButton: _editorConsoleTab,
       docsButton: _editorDocsTab,
+      clearConsoleButton: _consoleClearLeftButton,
       closeButton: _closePanelButton,
       docsElement: _leftDocPanel,
       consoleElement: _leftConsoleElement,
@@ -460,7 +475,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
     _tabExpandController = null;
   }
 
-  MaterialTabController _initTabs() {
+  MaterialTabController _buildTabs() {
     final webLayoutTabController =
         MaterialTabController(MDCTabBar(_webTabBar.element));
     for (final name in ['dart', 'html', 'css']) {
@@ -512,6 +527,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
         .createFromElement(_editorHost, options: codeMirrorOptions)
       ..theme = 'darkpad'
       ..mode = 'dart'
+      ..keyMap = window.localStorage['codemirror_keymap'] ?? 'default'
       ..showLineNumbers = true;
 
     initKeyBindings();
@@ -526,20 +542,20 @@ class Playground extends EditorUi implements GistContainer, GistController {
     context.onDartReconcile.listen((_) => performAnalysis());
 
     final Property htmlFile =
-        GistFileProperty(_editableGist.getGistFile('index.html')!);
+        GistFileProperty(_editableGist.getGistFile('index.html'));
     final Property htmlDoc =
         EditorDocumentProperty(context.htmlDocument, 'html');
     bind(htmlDoc, htmlFile);
     bind(htmlFile, htmlDoc);
 
     final Property cssFile =
-        GistFileProperty(_editableGist.getGistFile('styles.css')!);
+        GistFileProperty(_editableGist.getGistFile('styles.css'));
     final Property cssDoc = EditorDocumentProperty(context.cssDocument, 'css');
     bind(cssDoc, cssFile);
     bind(cssFile, cssDoc);
 
     final Property dartFile =
-        GistFileProperty(_editableGist.getGistFile('main.dart')!);
+        GistFileProperty(_editableGist.getGistFile('main.dart'));
     final Property dartDoc =
         EditorDocumentProperty(context.dartDocument, 'dart');
     bind(dartDoc, dartFile);
@@ -691,7 +707,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
 
       _editableGist.description = storedGist.description;
       for (final file in storedGist.files) {
-        _editableGist.getGistFile(file.name)!.content = file.content;
+        _editableGist.getGistFile(file.name).content = file.content;
       }
       return LoadGistResult.storage;
     }
@@ -705,7 +721,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
     if (!isLegalGistId(gistId)) {
       showHome();
       return;
-    } else if (_editableGist.backingGist!.id == gistId) {
+    } else if (_editableGist.backingGist.id == gistId) {
       return;
     }
 
@@ -742,7 +758,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
         final storedGist = _gistStorage.getStoredGist()!;
         _editableGist.description = storedGist.description;
         for (final file in storedGist.files) {
-          _editableGist.getGistFile(file.name)!.content = file.content;
+          _editableGist.getGistFile(file.name).content = file.content;
         }
       }
 
@@ -791,7 +807,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
       }
 
       if (originalSource != result.newString) {
-        editor.document.updateValue(result.newString);
+        context.dartSource = result.newString;
         showSnackbar('Format successful.');
       } else {
         showSnackbar('No formatting changes.');
@@ -850,6 +866,12 @@ class Playground extends EditorUi implements GistContainer, GistController {
         _initRightSplitter();
         _editorPanelHeader.setAttr('hidden');
         _webOutputLabel.setAttr('hidden');
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-dart', true);
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-html', false);
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-flutter', false);
         break;
       case Layout.html:
         _disposeRightSplitter();
@@ -862,6 +884,12 @@ class Playground extends EditorUi implements GistContainer, GistController {
         _webLayoutTabController.selectTab('dart');
         _editorPanelHeader.clearAttr('hidden');
         _webOutputLabel.setAttr('hidden');
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-dart', false);
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-html', true);
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-flutter', false);
         break;
       case Layout.flutter:
         _disposeRightSplitter();
@@ -874,6 +902,12 @@ class Playground extends EditorUi implements GistContainer, GistController {
         _webLayoutTabController.selectTab('dart');
         _editorPanelHeader.setAttr('hidden');
         _webOutputLabel.clearAttr('hidden');
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-dart', false);
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-html', false);
+        _searchController.searchDialogDiv
+            .toggleClass('search-playground-flutter', true);
         break;
     }
   }
@@ -920,13 +954,9 @@ class Playground extends EditorUi implements GistContainer, GistController {
   }
 
   Future<void> _showCreateGistDialog() async {
-    final result = await dialog.showOkCancel(
-        'Create New Pad', 'Discard changes to the current pad?');
-    if (result == DialogResult.ok) {
-      final layout = await _newPadDialog.show();
-      if (layout == null) return;
-      await createGistForLayout(layout);
-    }
+    final layout = await _newPadDialog.show();
+    if (layout == null) return;
+    await createGistForLayout(layout);
   }
 
   Future<void> _showResetDialog() async {
@@ -1098,13 +1128,20 @@ class NewPadDialog {
 
     _mdcDialog.open();
 
-    return completer.future.then((v) {
+    void handleClosing(Event _) {
       _flutterButton.root.classes.remove('selected');
       _dartButton.root.classes.remove('selected');
+      _htmlSwitchContainer.toggleClass('hide', true);
       dartSub.cancel();
       flutterSub.cancel();
       cancelSub.cancel();
       createSub.cancel();
+      _mdcDialog.unlisten('MDCDialog:closing', handleClosing);
+    }
+
+    _mdcDialog.listen('MDCDialog:closing', handleClosing);
+
+    return completer.future.then((v) {
       _mdcDialog.close();
       return v;
     });
@@ -1116,5 +1153,5 @@ class Sample {
   final String name;
   final Layout layout;
 
-  Sample(this.gistId, this.name, this.layout);
+  const Sample(this.gistId, this.name, this.layout);
 }

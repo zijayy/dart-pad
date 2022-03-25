@@ -23,6 +23,8 @@ final CodeMirrorFactory codeMirrorFactory = CodeMirrorFactory._();
 class CodeMirrorFactory extends EditorFactory {
   CodeMirrorFactory._();
 
+  SearchUpdateCallback? _searchUpdateCallback;
+
   String? get version => CodeMirror.version;
 
   @override
@@ -36,8 +38,17 @@ class CodeMirrorFactory extends EditorFactory {
     options ??= {
       'continueComments': {'continueLineComment': false},
       'autofocus': false,
-      // Removing this - with this enabled you can't type a forward slash.
-      //'autoCloseTags': true,
+      'autoCloseTags': {
+        'whenOpening': true,
+        'whenClosing': true,
+        'indentTags':
+            [] // Android Studio/VSCode do not auto indent/add newlines for any completed tags
+        //  The default (below) would be the following tags cause indenting and blank line inserted
+        // ['applet', 'blockquote', 'body', 'button', 'div', 'dl', 'fieldset',
+        //    'form', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head',
+        //    'html', 'iframe', 'layer', 'legend', 'object', 'ol', 'p', 'select', \
+        //    'table', 'ul']
+      },
       'autoCloseBrackets': true,
       'matchBrackets': true,
       'tabSize': 2,
@@ -51,15 +62,36 @@ class CodeMirrorFactory extends EditorFactory {
       'extraKeys': {
         'Cmd-/': 'toggleComment',
         'Ctrl-/': 'toggleComment',
-        'Tab': 'insertSoftTab'
+        'Shift-Tab': 'indentLess',
+        'Tab': 'indentIfMultiLineSelectionElseInsertSoftTab',
+        'Ctrl-F': 'weHandleElsewhere',
+        'Ctrl-H': 'weHandleElsewhere',
+        'Cmd-F': 'weHandleElsewhere',
+        'Cmd-H': 'weHandleElsewhere',
+        'Shift-Ctrl-G': 'weHandleElsewhere',
+        'Ctrl-G': 'weHandleElsewhere',
+        'Cmd-G': 'weHandleElsewhere',
+        'Shift-Cmd-G': 'weHandleElsewhere',
+        'F4': 'weHandleElsewhere',
+        'Shift-F4': 'weHandleElsewhere',
       },
       'hintOptions': {'completeSingle': false},
+      'highlightSelectionMatches': {
+        'style': 'highlight-selection-matches',
+        'showToken': false,
+        'annotateScrollbar': true,
+      },
       //'lint': true,
       'theme': 'zenburn' // ambiance, vibrant-ink, monokai, zenburn
     };
 
     final editor = CodeMirror.fromElement(element, options: options);
     CodeMirror.addCommand('goLineLeft', _handleGoLineLeft);
+    CodeMirror.addCommand('indentIfMultiLineSelectionElseInsertSoftTab',
+        _indentIfMultiLineSelectionElseInsertSoftTab);
+    CodeMirror.addCommand('weHandleElsewhere', _weHandleElsewhere);
+    CodeMirror.addCommand(
+        'ourSearchQueryUpdatedCallback', _ourSearchQueryUpdatedCallback);
     return _CodeMirrorEditor._(this, editor);
   }
 
@@ -71,9 +103,47 @@ class CodeMirrorFactory extends EditorFactory {
     });
   }
 
+  /// used to set the search update callback that will be called when
+  /// the editors update their search annonations
+  @override
+  void registerSearchUpdateCallback(SearchUpdateCallback sac) {
+    _searchUpdateCallback = sac;
+  }
+
   // Change the cmd-left behavior to move the cursor to the leftmost non-ws char.
   void _handleGoLineLeft(CodeMirror editor) {
     editor.execCommand('goLineLeftSmart');
+  }
+
+  // make it so that we can insertSoftTab when no selection or selection on 1 line
+  // but if there is multiline selection we indentMore
+  // (this gives us a more typical coding editor behavior)
+  void _indentIfMultiLineSelectionElseInsertSoftTab(CodeMirror editor) {
+    if (editor.doc.somethingSelected()) {
+      final String? selection = editor.doc.getSelection('\n');
+      if (selection != null && selection.contains('\n')) {
+        // Multi-line selection
+        editor.execCommand('indentMore');
+      } else {
+        editor.execCommand('insertSoftTab');
+      }
+    } else {
+      editor.execCommand('insertSoftTab');
+    }
+  }
+
+  void _weHandleElsewhere(CodeMirror editor) {
+    // DO NOTHING HERE - we bind/handle this at the top level html page, not
+    //    within codemorror
+  }
+
+  void _ourSearchQueryUpdatedCallback(CodeMirror editor) {
+    // This is called by our codemirror extension when the search query
+    // results and annotation
+    if (_searchUpdateCallback != null) {
+      // they have a callback set, so get the info
+      _searchUpdateCallback!();
+    }
   }
 
   Future<HintResults> _completionHelper(
@@ -183,12 +253,76 @@ class _CodeMirrorEditor extends Editor {
     if (mode == 'html') mode = 'text/html';
     content ??= '';
 
-    // TODO: For `html`, enable and disable the 'autoCloseTags' option.
     return _CodeMirrorDocument._(this, Doc(content, mode));
   }
 
   @override
   void execCommand(String name) => cm.execCommand(name);
+
+  @override
+  Map<String, dynamic> startSearch(String query, bool reverse,
+      bool highlightOnly, bool matchCase, bool wholeWord, bool regEx) {
+    final JsObject? jsobj = cm.callArgs('searchFromDart', [
+      query,
+      reverse,
+      highlightOnly,
+      matchCase,
+      wholeWord,
+      regEx
+    ]) as JsObject?;
+    if (jsobj != null) {
+      return {
+        'total': (jsobj['total'] ?? 0) as int,
+        'curMatchNum': (jsobj['curMatchNum'] ?? -1) as int,
+      };
+    } else {
+      return {'total': 0, 'curMatchNum': -1};
+    }
+  }
+
+  @override
+  int searchAndReplace(String query, String replaceText, bool replaceAll,
+      bool matchCase, bool wholeWord, bool regEx) {
+    JsObject? jsobj;
+    if (replaceAll) {
+      jsobj = cm.callArgs('replaceAllFromDart',
+          [query, replaceText, matchCase, wholeWord, regEx]) as JsObject?;
+    } else {
+      jsobj = cm.callArgs('replaceNextFromDart',
+          [query, replaceText, matchCase, wholeWord, regEx]) as JsObject?;
+    }
+    if (jsobj != null) {
+      return (jsobj['total'] ?? 0) as int;
+    } else {
+      return 0;
+    }
+  }
+
+  @override
+  String? getTokenWeAreOnOrNear([String? regEx]) {
+    final String? foundToken =
+        cm.callArg('getTokenWeAreOnOrNear', regEx) as String?;
+    return foundToken;
+  }
+
+  @override
+  Map<String, dynamic> getMatchesFromSearchQueryUpdatedCallback() {
+    final JsObject? jsobj = cm.callArg(
+        'getMatchesFromSearchQueryUpdatedCallback', null) as JsObject?;
+    if (jsobj != null) {
+      return {
+        'total': (jsobj['total'] ?? 0) as int,
+        'curMatchNum': (jsobj['curMatchNum'] ?? -1) as int,
+      };
+    } else {
+      return {'total': 0, 'curMatchNum': -1};
+    }
+  }
+
+  @override
+  void clearActiveSearch() {
+    cm.callArg('clearActiveSearch', null);
+  }
 
   @override
   void showCompletions({bool autoInvoked = false, bool onlyShowFixes = false}) {
@@ -233,6 +367,27 @@ class _CodeMirrorEditor extends Editor {
 
   @override
   set theme(String str) => cm.setTheme(str);
+
+  @override
+  dynamic getOption(String option) => cm.getOption(option);
+
+  @override
+  void setOption(String option, dynamic value) => cm.setOption(option, value);
+
+  @override
+  String get keyMap {
+    dynamic keymap = cm.getOption('keyMap');
+    if (keymap == null || (keymap as String).isEmpty) keymap = 'default';
+    return keymap;
+  }
+
+  /// Valid options are `default` or `vim`
+  /// (in order to use `emacs` or `sublime` we MUST also INCLUDE those keymaps.js files in the html containers)
+  @override
+  set keyMap(String? newkeymap) {
+    if (newkeymap == null || newkeymap.isEmpty) newkeymap = 'default';
+    cm.setOption('keyMap', newkeymap);
+  }
 
   @override
   bool get hasFocus => _jsProxyState?['focused'] == true;
@@ -329,7 +484,18 @@ class _CodeMirrorDocument extends Document<_CodeMirrorEditor> {
   }
 
   @override
-  String get selection => doc.getSelection(value)!;
+
+  /// is there anything selected
+  bool get somethingSelected => doc.somethingSelected();
+
+  @override
+  String get selection => doc.getSelection(
+      value)!; //KLUDGE 'value' seems wrong, supposed to be line separator and value is THE ENTIRE DOCUMENT
+
+  @override
+  void replaceSelection(String replacement, [String? select]) {
+    doc.replaceSelection(replacement, value);
+  }
 
   @override
   String get mode => parent.mode;
