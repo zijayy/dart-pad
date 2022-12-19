@@ -20,7 +20,6 @@ import 'core/keys.dart';
 import 'core/modules.dart';
 import 'dart_pad.dart';
 import 'documentation.dart';
-import 'editing/codemirror_options.dart';
 import 'editing/editor_codemirror.dart';
 import 'elements/analysis_results_controller.dart';
 import 'elements/bind.dart';
@@ -354,6 +353,11 @@ class Playground extends EditorUi implements GistContainer, GistController {
                   ..text =
                       'Use Flutter version ${channel.flutterVersion} and Dart '
                           'version ${channel.dartVersion}',
+                if (channel.experiments.isNotEmpty)
+                  ParagraphElement()
+                    ..classes.add('mdc-list-item__details')
+                    ..text = '+ Dart experiments: '
+                        "--enable-experiment=${channel.experiments.reduce((value, element) => '$value,$element')}",
               ],
           ],
       ])
@@ -534,8 +538,7 @@ class Playground extends EditorUi implements GistContainer, GistController {
     deps[GistLoader] = GistLoader.defaultFilters();
 
     // Set up CodeMirror
-    editor = (editorFactory as CodeMirrorFactory)
-        .createFromElement(_editorHost, options: codeMirrorOptions)
+    editor = (editorFactory as CodeMirrorFactory).createFromElement(_editorHost)
       ..theme = 'darkpad'
       ..mode = 'dart'
       ..keyMap = window.localStorage['codemirror_keymap'] ?? 'default'
