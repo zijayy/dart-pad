@@ -8,12 +8,11 @@ import 'dart:async';
 import 'dart:html';
 
 import 'execution.dart';
+import 'execution_result_util.dart' show frameTestResultDecoration, testKey;
 
 export 'execution.dart';
 
 class ExecutionServiceIFrame implements ExecutionService {
-  static const testKey = '__TESTRESULT__ ';
-
   final StreamController<String> _stdoutController =
       StreamController<String>.broadcast();
   final StreamController<String> _stderrController =
@@ -46,6 +45,8 @@ class ExecutionServiceIFrame implements ExecutionService {
     bool addRequireJs = false,
     bool addFirebaseJs = false,
     bool destroyFrame = false,
+    bool useLegacyCanvasKit = false,
+    String? canvasKitBaseUrl,
   }) async {
     if (destroyFrame) {
       await _reset();
@@ -58,6 +59,8 @@ class ExecutionServiceIFrame implements ExecutionService {
       'addRequireJs': addRequireJs,
       'addFirebaseJs': addFirebaseJs,
       'destroyFrame': destroyFrame,
+      'useLegacyCanvasKit': useLegacyCanvasKit,
+      'canvasKitBaseUrl': canvasKitBaseUrl,
     });
   }
 
@@ -79,22 +82,8 @@ class ExecutionServiceIFrame implements ExecutionService {
     _frameSrc = src;
   }
 
-  /// TODO(redbrogdon): Format message so internal double quotes are escaped.
   @override
-  String get testResultDecoration => '''
-void _result(bool success, [List<String> messages = const []]) {
-  // Join messages into a comma-separated list for inclusion in the JSON array.
-  final joinedMessages = messages.map((m) => '"\$m"').join(',');
-  print('$testKey{"success": \$success, "messages": [\$joinedMessages]}');
-}
-
-// Ensure we have at least one use of `_result`.
-var resultFunction = _result;
-
-// Placeholder for unimplemented methods in dart-pad exercises.
-// ignore: non_constant_identifier_names, sdk_version_never
-Never TODO([String message = '']) => throw UnimplementedError(message);
-''';
+  String get testResultDecoration => frameTestResultDecoration;
 
   String _decorateJavaScript(
     String javaScript, {
@@ -220,7 +209,7 @@ require(["dartpad_main", "dart_sdk"], function(dartpad_main, dart_sdk) {
   @override
   Stream<TestResult> get testResults => _testResultsController.stream;
 
-  Future<void> _send(String command, Map<String, Object> params) {
+  Future<void> _send(String command, Map<String, Object?> params) {
     final message = {
       'command': command,
       ...params,
